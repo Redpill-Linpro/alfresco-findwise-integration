@@ -1,0 +1,6 @@
+<webscript>
+  <shortname>Index Manager</shortname>
+  <description>Admin Console - Findwise - Index Manager</description>
+  <url>/components/console/index-manager</url>
+  <family>admin-console</family>
+</webscript>

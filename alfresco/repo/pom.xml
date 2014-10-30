@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.redpill-linpro.alfresco</groupId>
+    <artifactId>findwise-integration</artifactId>
+    <version>1.0.0</version>
+  </parent>
+
+  <artifactId>findwise-integration-repo</artifactId>
+  <packaging>amp</packaging>
+  <name>Alfresco Repository AMP Module</name>
+
+  <properties>
+    <module.id>findwise-repo</module.id>
+    <!-- This property allow to switch Repo AMP vs Share AMP. Set alfresco.client.war=share to run this AMP against Share -->
+    <alfresco.client.war>alfresco</alfresco.client.war>
+    <tomcat.home>${tomcat.repo.home}</tomcat.home>
+    <tomcat.port>${tomcat.repo.port}</tomcat.port>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>${alfresco.groupId}</groupId>
+      <artifactId>alfresco-repository</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.jmock</groupId>
+      <artifactId>jmock-junit4</artifactId>
+      <exclusions>
+        <exclusion>
+          <artifactId>junit-dep</artifactId>
+          <groupId>junit</groupId>
+        </exclusion>
+      </exclusions>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.redpill-linpro.alfresco</groupId>
+      <artifactId>alfresco-test-repo</artifactId>
+      <version>1.0.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.2.4</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.1.1</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+</project>

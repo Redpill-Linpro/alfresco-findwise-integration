@@ -10,3 +10,11 @@
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+
+.project
+.settings
+.classpath
+target
+alf_data_dev
+repo/.xml/
+alfresco.log
