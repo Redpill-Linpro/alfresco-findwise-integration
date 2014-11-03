@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
+import org.alfresco.model.ContentModel;
 import org.alfresco.repo.policy.BehaviourFilter;
 import org.alfresco.service.cmr.dictionary.DictionaryService;
 import org.alfresco.service.cmr.dictionary.PropertyDefinition;
@@ -182,6 +183,18 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
       LOG.trace("pushUpdateToIndexService end");
     }
   }
+  
+  protected boolean isPropertyAllowedToIndex(QName property) {
+    if (ContentModel.PROP_AUTO_VERSION.equals(property)) {
+      return false;
+    } else if (ContentModel.PROP_AUTO_VERSION_PROPS.equals(property)) {
+      return false;
+    } else if (ContentModel.PROP_INITIAL_VERSION.equals(property)) {
+      return false;
+    } else {
+      return true;
+    }
+  }
 
   /**
    * Create bean object from node properties
@@ -202,7 +215,14 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
         FindwiseFieldBean ffb = new FindwiseFieldBean();
         QName property = it.next();
         Serializable value = properties.get(property);
-
+        if (NamespaceService.SYSTEM_MODEL_1_0_URI.equals(property.getNamespaceURI()) ||
+            FindwiseIntegrationModel.URI.equals(property.getNamespaceURI()) ||
+            !isPropertyAllowedToIndex(property)) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Skiping property " + property.toString());
+          }
+          continue;
+        }
         PropertyDefinition propertyDefinition = dictionaryService.getProperty(property);
         String javaClassName = propertyDefinition.getDataType().getJavaClassName();
         String type;
@@ -225,7 +245,7 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
           if (LOG.isTraceEnabled()) {
             LOG.trace("Converting " + property.toString() + " to date");
           }
-          type = "date";
+          type = "string";
           //SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-DDThh:mm:ssZ");
           //sdf.setTimeZone(TimeZone.getTimeZone("UTC"));          
           DateTime date = new DateTime( (Date) value, DateTimeZone.UTC );
