@@ -36,9 +36,8 @@ import java.util.Set;
 
 import org.alfresco.model.ContentModel;
 import org.alfresco.repo.admin.SysAdminParams;
-import org.alfresco.repo.i18n.StaticMessageLookup;
 import org.alfresco.repo.policy.BehaviourFilter;
-import org.alfresco.service.cmr.dictionary.ClassDefinition;
+import org.alfresco.service.cmr.dictionary.DataTypeDefinition;
 import org.alfresco.service.cmr.dictionary.DictionaryService;
 import org.alfresco.service.cmr.dictionary.PropertyDefinition;
 import org.alfresco.service.cmr.repository.ContentReader;
@@ -97,7 +96,7 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
     Assert.notNull(sysAdminParams);
     Assert.notNull(siteService);
   }
-  
+
   public void setSiteService(SiteService siteService) {
     this.siteService = siteService;
   }
@@ -246,8 +245,10 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
       // Get node type
       QName nodeType = nodeService.getType(nodeRef);
       String title = nodeType.toPrefixString(namespaceService);
-      /*ClassDefinition nodeDefinition = dictionaryService.getClass(nodeType);
-      String title = nodeDefinition.getTitle(new StaticMessageLookup());*/
+      /*
+       * ClassDefinition nodeDefinition = dictionaryService.getClass(nodeType);
+       * String title = nodeDefinition.getTitle(new StaticMessageLookup());
+       */
       FindwiseFieldBean typeTitleField = new FindwiseFieldBean();
       typeTitleField.setName("type");
       typeTitleField.setType("string");
@@ -281,7 +282,7 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
       downloadUrlField.setType("string");
       downloadUrlField.setValue(downloadUrl);
       fields.add(downloadUrlField);
-      
+
       String detailsPath = "/page/site/" + siteShortName + "/document-details?nodeRef=" + URLEncoder.encode(nodeRef.toString());
       String detailsUrl = shareUrl + detailsPath;
       FindwiseFieldBean detailsUrlField = new FindwiseFieldBean();
@@ -289,11 +290,14 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
       detailsUrlField.setType("string");
       detailsUrlField.setValue(detailsUrl);
       fields.add(detailsUrlField);
-      
+
       Iterator<QName> it = properties.keySet().iterator();
       while (it.hasNext()) {
         FindwiseFieldBean ffb = new FindwiseFieldBean();
         QName property = it.next();
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Handling property " + property.toString());
+        }
         Serializable value = properties.get(property);
         if (NamespaceService.SYSTEM_MODEL_1_0_URI.equals(property.getNamespaceURI()) || FindwiseIntegrationModel.URI.equals(property.getNamespaceURI()) || !isPropertyAllowedToIndex(property)) {
           if (LOG.isTraceEnabled()) {
@@ -301,8 +305,15 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
           }
           continue;
         }
+        String javaClassName = "unknown";
         PropertyDefinition propertyDefinition = dictionaryService.getProperty(property);
-        String javaClassName = propertyDefinition.getDataType().getJavaClassName();
+        //The following condition is needed to properly handle residual properties
+        if (propertyDefinition!=null ) {
+          DataTypeDefinition dataType = propertyDefinition.getDataType();
+          if (dataType!=null) {
+            javaClassName = dataType.getJavaClassName();
+          }
+        }
         String type;
         if (LOG.isTraceEnabled()) {
           LOG.trace("Detected " + javaClassName + " java type for property " + property.toString());
