@@ -27,11 +27,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 
 import org.alfresco.repo.policy.BehaviourFilter;
 import org.alfresco.service.cmr.dictionary.DictionaryService;
@@ -45,11 +47,14 @@ import org.alfresco.service.namespace.QName;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.apache.log4j.Logger;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.redpill.alfresco.repo.findwise.bean.FindwiseFieldBean;
 import org.redpill.alfresco.repo.findwise.bean.FindwiseObjectBean;
 import org.redpill.alfresco.repo.findwise.model.FindwiseIntegrationModel;
@@ -120,27 +125,41 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
     if (LOG.isTraceEnabled()) {
       LOG.trace("pushUpdateToIndexService begin");
     }
-    if (nodeRef == null || !nodeService.exists(nodeRef)) {
-      LOG.debug(nodeRef + " does not exist");
-    } else if (!nodeVerifierProcessor.verifyDocument(nodeRef)) {
-      LOG.debug(nodeRef + " did not pass final node verification");
-    } else {
-      if (ACTION_CREATE.equals(action)) {
-        List<FindwiseObjectBean> fobs = new ArrayList<FindwiseObjectBean>();
-        FindwiseObjectBean fob = createFindwiseObjectBean(nodeRef);
+
+    boolean send = false;
+    List<FindwiseObjectBean> fobs = new ArrayList<FindwiseObjectBean>();
+
+    if (ACTION_CREATE.equals(action)) {
+      if (nodeRef == null || !nodeService.exists(nodeRef)) {
+        LOG.debug(nodeRef + " does not exist");
+      } else if (!nodeVerifierProcessor.verifyDocument(nodeRef)) {
+        LOG.debug(nodeRef + " did not pass final node verification");
+      } else {
+        FindwiseObjectBean fob = createFindwiseObjectBean(nodeRef, false);
         fobs.add(fob);
-        Gson gson = new Gson();
-        String json = gson.toJson(fobs);
-        if (LOG.isTraceEnabled()) {
-          if (json.length() < 102400) {
-            LOG.trace("Json: " + json);
-          } else {
-            LOG.trace("Omitting json trace printout due to its size");
-          }
+        send = true;
+      }
+    } else if (ACTION_DELETE.equals(action)) {
+      FindwiseObjectBean fob = createFindwiseObjectBean(nodeRef, true);
+      fobs.add(fob);
+      send = true;
+    } else {
+      throw new UnsupportedOperationException(action + " is not a supported operation");
+    }
+
+    if (send) {
+      Gson gson = new Gson();
+      String json = gson.toJson(fobs);
+      if (LOG.isTraceEnabled()) {
+        if (json.length() < 102400) {
+          LOG.trace("Json: " + json);
+        } else {
+          LOG.trace("Omitting json trace printout due to its size");
         }
-        if (Boolean.TRUE.equals(pushEnabled)) {
-          LOG.debug("Push is next for " + nodeRef);
-          final boolean pushResult = doPush(json);
+      }
+      if (Boolean.TRUE.equals(pushEnabled)) {
+        final boolean pushResult = doPost(json);
+        if (nodeService.exists(nodeRef)) {
           LOG.debug("Setting push result on node " + nodeRef);
 
           behaviourFilter.disableBehaviour(nodeRef);
@@ -154,13 +173,9 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
             nodeService.setProperty(nodeRef, FindwiseIntegrationModel.PROP_LAST_PUSH_FAILED, true);
           }
           behaviourFilter.enableBehaviour(nodeRef);
-
-        } else {
-          LOG.info("Push is disabled");
         }
-
       } else {
-        throw new UnsupportedOperationException(action + " is not a supported operation");
+        LOG.info("Push is disabled");
       }
     }
     if (LOG.isTraceEnabled()) {
@@ -174,74 +189,86 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
    * @param nodeRef
    * @return
    */
-  protected FindwiseObjectBean createFindwiseObjectBean(final NodeRef nodeRef) {
+  protected FindwiseObjectBean createFindwiseObjectBean(final NodeRef nodeRef, boolean empty) {
     FindwiseObjectBean fob = new FindwiseObjectBean();
     fob.setId(nodeRef.toString());
-    List<FindwiseFieldBean> fields = new ArrayList<FindwiseFieldBean>();
+    if (empty == false) {
+      List<FindwiseFieldBean> fields = new ArrayList<FindwiseFieldBean>();
 
-    Map<QName, Serializable> properties = nodeService.getProperties(nodeRef);
-    // TODO add node type property
-    Iterator<QName> it = properties.keySet().iterator();
-    while (it.hasNext()) {
-      FindwiseFieldBean ffb = new FindwiseFieldBean();
-      QName property = it.next();
-      Serializable value = properties.get(property);
+      Map<QName, Serializable> properties = nodeService.getProperties(nodeRef);
+      // TODO add node type property
+      Iterator<QName> it = properties.keySet().iterator();
+      while (it.hasNext()) {
+        FindwiseFieldBean ffb = new FindwiseFieldBean();
+        QName property = it.next();
+        Serializable value = properties.get(property);
 
-      PropertyDefinition propertyDefinition = dictionaryService.getProperty(property);
-      String javaClassName = propertyDefinition.getDataType().getJavaClassName();
-      String type;
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Detected " + javaClassName + " java type for property " + property.toString());
-      }
-      /*
-       * if ("java.lang.String".equals(javaClassName)) { type = "string";
-       * ffb.setValue(value); } else if
-       * ("java.lang.Integer".equals(javaClassName)) { type = "integer";
-       * ffb.setValue(value); } else if ("java.lang.Long".equals(javaClassName))
-       * { type = "long"; ffb.setValue(value); } else if
-       * ("java.lang.Boolean".equals(javaClassName)) { type = "boolean";
-       * ffb.setValue(value); } else if ("java.lang.Date".equals(javaClassName))
-       * { type = "date"; ffb.setValue(value); } else
-       */
-      if ("org.alfresco.service.cmr.repository.ContentData".equals(javaClassName)) {
-        // Create Base64 data
+        PropertyDefinition propertyDefinition = dictionaryService.getProperty(property);
+        String javaClassName = propertyDefinition.getDataType().getJavaClassName();
+        String type;
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Skipping field " + property.toString());
+          LOG.trace("Detected " + javaClassName + " java type for property " + property.toString());
+        }
+        /*
+         * if ("java.lang.String".equals(javaClassName)) { type = "string";
+         * ffb.setValue(value); } else if
+         * ("java.lang.Integer".equals(javaClassName)) { type = "integer";
+         * ffb.setValue(value); } else if
+         * ("java.lang.Long".equals(javaClassName)) { type = "long";
+         * ffb.setValue(value); } else if
+         * ("java.lang.Boolean".equals(javaClassName)) { type = "boolean";
+         * ffb.setValue(value); } else if
+         * ("java.lang.Date".equals(javaClassName)) { type = "date";
+         * ffb.setValue(value); } else
+         */
+        if ("java.util.Date".equals(javaClassName)) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Converting " + property.toString() + " to date");
+          }
+          type = "date";
+          //SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-DDThh:mm:ssZ");
+          //sdf.setTimeZone(TimeZone.getTimeZone("UTC"));          
+          DateTime date = new DateTime( (Date) value, DateTimeZone.UTC );
+          ffb.setValue(date.toString());
+        } else if ("org.alfresco.service.cmr.repository.ContentData".equals(javaClassName)) {
+          // Create Base64 data
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Skipping field " + property.toString());
+          }
+          ContentReader contentReader = contentService.getReader(nodeRef, property);
+          InputStream nodeIS = new BufferedInputStream(contentReader.getContentInputStream(), 4096);
 
+          try {
+            byte[] nodeBytes = IOUtils.toByteArray(nodeIS);
+            ffb.setValue(new String(Base64.encodeBase64(nodeBytes)));
+          } catch (IOException e) {
+            LOG.warn("Error while reading content", e);
+          }
+          type = "binary";
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Unhandled property type, using default conversion");
+          }
+          type = "string";
+          ffb.setValue(value.toString());
         }
-        ContentReader contentReader = contentService.getReader(nodeRef, property);
-        InputStream nodeIS = new BufferedInputStream(contentReader.getContentInputStream(), 4096);
+        ffb.setType(type);
 
-        try {
-          byte[] nodeBytes = IOUtils.toByteArray(nodeIS);
-          ffb.setValue(new String(Base64.encodeBase64(nodeBytes)));
-        } catch (IOException e) {
-          LOG.warn("Error while reading content", e);
+        String name = property.toPrefixString(namespaceService);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Short name for property " + property.toString() + ": " + name);
         }
-        type = "binary";
-      } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Unhandled property type, using default conversion");
-        }
-        type = "string";
-        ffb.setValue(value.toString());
+
+        ffb.setName(name);
+
+        fields.add(ffb);
       }
-      ffb.setType(type);
-
-      String name = property.toPrefixString(namespaceService);
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Short name for property " + property.toString() + ": " + name);
-      }
-
-      ffb.setName(name);
-
-      fields.add(ffb);
+      fob.setFields(fields);
     }
-    fob.setFields(fields);
     return fob;
   }
 
-  protected boolean doPush(final String json) {
+  protected boolean doPost(final String json) {
     boolean result = false;
     DefaultHttpClient httpclient = new DefaultHttpClient();
     try {
@@ -272,6 +299,30 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
        * LOG.warn("Error making post to " + pushUrl, e); }
        */
     }
+    return result;
+  }
+
+  // TODO delete
+  protected boolean doDelete(final String json) {
+    boolean result = false;
+    /*
+     * DefaultHttpClient httpclient = new DefaultHttpClient(); try { HttpDelete
+     * httpDelete = new HttpDelete(pushUrl); StringEntity entity = new
+     * StringEntity(json, "UTF-8"); httpDelete.setEntity(entity); httpDelete.set
+     * if (LOG.isDebugEnabled()) { LOG.debug("Executing request: " +
+     * httpDelete.getRequestLine()); } httpDelete.addHeader("Content-Type",
+     * "application/json;charset=UTF-8"); HttpResponse response =
+     * httpclient.execute(httpDelete); try { if (LOG.isDebugEnabled()) {
+     * LOG.debug("Response" + response.getStatusLine()); }
+     * EntityUtils.consume(response.getEntity()); result = true; } finally { //
+     * response.close(); } } catch (UnsupportedEncodingException e) {
+     * LOG.warn("Error transforming json to http entity. Json: " + json, e); }
+     * catch (Exception e) { LOG.warn("Error executing http post to " + pushUrl
+     * + " Json: " + json, e); } finally { /* try { //httpclient.close(); }
+     * catch (IOException e) { LOG.warn("Error making post to " + pushUrl, e); }
+     * 
+     * }
+     */
     return result;
   }
 

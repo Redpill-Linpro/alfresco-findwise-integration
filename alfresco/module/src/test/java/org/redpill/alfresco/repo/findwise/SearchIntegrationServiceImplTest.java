@@ -124,7 +124,7 @@ public class SearchIntegrationServiceImplTest {
         will(returnValue(false));
       }
     });
-    searchIntegrationService.pushUpdateToIndexService(nodeRef1, "someDummyValue");
+    searchIntegrationService.pushUpdateToIndexService(nodeRef1, SearchIntegrationService.ACTION_CREATE);
 
     m.assertIsSatisfied();
   }

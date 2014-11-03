@@ -26,6 +26,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import org.alfresco.model.ContentModel;
 import org.alfresco.repo.node.NodeServicePolicies.OnAddAspectPolicy;
+import org.alfresco.repo.node.NodeServicePolicies.OnDeleteNodePolicy;
 import org.alfresco.repo.node.NodeServicePolicies.OnUpdateNodePolicy;
 import org.alfresco.repo.policy.Behaviour;
 import org.alfresco.repo.policy.Behaviour.NotificationFrequency;
@@ -37,6 +38,7 @@ import org.alfresco.repo.transaction.AlfrescoTransactionSupport;
 import org.alfresco.repo.transaction.RetryingTransactionHelper.RetryingTransactionCallback;
 import org.alfresco.repo.transaction.TransactionListener;
 import org.alfresco.repo.transaction.TransactionListenerAdapter;
+import org.alfresco.service.cmr.repository.ChildAssociationRef;
 import org.alfresco.service.cmr.repository.NodeRef;
 import org.alfresco.service.cmr.repository.NodeService;
 import org.alfresco.service.namespace.QName;
@@ -52,7 +54,7 @@ import org.springframework.util.Assert;
  * @author Marcus Svensson
  *
  */
-public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePolicy, OnAddAspectPolicy {
+public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePolicy, OnAddAspectPolicy, OnDeleteNodePolicy {
 
   private static final Logger LOG = Logger.getLogger(QueueForIndexingPolicy.class);
   private static boolean isInitialized = false;
@@ -67,11 +69,13 @@ public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePol
   private TransactionListener transactionListener;
   private TransactionService transactionService;
   private static final String KEY_CREATE = QueueForIndexingPolicy.class.getName() + ".create";
+  private static final String KEY_DELETE = QueueForIndexingPolicy.class.getName() + ".delete";
 
   @Override
   public void afterPropertiesSet() throws Exception {
     if (!isInitialized()) {
       policyComponent.bindClassBehaviour(OnUpdateNodePolicy.QNAME, ContentModel.TYPE_CONTENT, new JavaBehaviour(this, "onUpdateNode", NotificationFrequency.TRANSACTION_COMMIT));
+      policyComponent.bindClassBehaviour(OnDeleteNodePolicy.QNAME, ContentModel.TYPE_CONTENT, new JavaBehaviour(this, "onDeleteNode", NotificationFrequency.TRANSACTION_COMMIT));
 
       policyComponent.bindClassBehaviour(OnAddAspectPolicy.QNAME, FindwiseIntegrationModel.ASPECT_FINDWISE_INDEXABLE, new JavaBehaviour(this, "onAddAspect",
           Behaviour.NotificationFrequency.TRANSACTION_COMMIT));
@@ -119,6 +123,7 @@ public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePol
   }
 
   protected boolean isValidDocument(NodeRef nodeRef) {
+
     if (nodeRef != null && nodeService.exists(nodeRef)) {
       if (!nodeService.hasAspect(nodeRef, FindwiseIntegrationModel.ASPECT_FINDWISE_INDEXABLE)) {
         return false;
@@ -150,56 +155,6 @@ public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePol
     }
   }
 
-  /**
-   * Transaction listener, fires off the new thread after transaction commit.
-   */
-  private class QueueForIndexingTransactionListener extends TransactionListenerAdapter {
-
-    @Override
-    public void afterCommit() {
-      NodeRef documentNodeRef = (NodeRef) AlfrescoTransactionSupport.getResource(KEY_CREATE);
-
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("After transaction queue for indexing " + documentNodeRef);
-      }
-
-      Runnable runnable = new QueueForIndexingWorker(documentNodeRef);
-
-      threadPoolExecutor.execute(runnable);
-    }
-
-    /**
-     * Updates the person user with additional details from KIV
-     */
-    public class QueueForIndexingWorker implements Runnable {
-      private NodeRef documentNodeRef;
-
-      public QueueForIndexingWorker(NodeRef documentNodeRef) {
-        this.documentNodeRef = documentNodeRef;
-      }
-
-      /**
-       * Runner
-       */
-      public void run() {
-        AuthenticationUtil.runAs(new RunAsWork<Void>() {
-          public Void doWork() throws Exception {
-            return transactionService.getRetryingTransactionHelper().doInTransaction(new RetryingTransactionCallback<Void>() {
-
-              @Override
-              public Void execute() throws Throwable {
-                searchIntegrationService.pushUpdateToIndexService(documentNodeRef, SearchIntegrationService.ACTION_CREATE);
-                return null;
-              }
-
-            }, false, true);
-
-          }
-        }, AuthenticationUtil.getSystemUserName());
-      }
-    }
-  }
-
   @Override
   public void onAddAspect(NodeRef nodeRef, QName aspectTypeQName) {
     if (LOG.isTraceEnabled()) {
@@ -218,4 +173,92 @@ public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePol
 
   }
 
+  @Override
+  public void onDeleteNode(ChildAssociationRef childAssocRef, boolean isNodeArchived) {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("onDeleteNode begin");
+    }
+    NodeRef nodeRef = childAssocRef.getChildRef();
+    if (isValidDocument(nodeRef)) {
+      LOG.debug(nodeRef + " is a valid document which will be removed from index");
+      AlfrescoTransactionSupport.bindListener(transactionListener);
+      AlfrescoTransactionSupport.bindResource(KEY_DELETE, nodeRef);
+    }
+
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("onDeleteNode end");
+    }
+
+  }
+
+  /**
+   * Transaction listener, fires off the new thread after transaction commit.
+   */
+  private class QueueForIndexingTransactionListener extends TransactionListenerAdapter {
+
+    @Override
+    public void afterCommit() {
+      NodeRef createdNodeRef = (NodeRef) AlfrescoTransactionSupport.getResource(KEY_CREATE);
+      NodeRef deletedNodeRef = (NodeRef) AlfrescoTransactionSupport.getResource(KEY_DELETE);
+
+      NodeRef nodeRef = null;
+      String action = null;
+      if (createdNodeRef != null) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Add to transaction queue for indexing " + createdNodeRef);
+        }
+        action = SearchIntegrationService.ACTION_CREATE;
+        nodeRef = createdNodeRef;
+      } else if (deletedNodeRef != null) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Add to transaction queue for remove from indexing " + deletedNodeRef);
+        }
+        action = SearchIntegrationService.ACTION_DELETE;
+        nodeRef = deletedNodeRef;
+      }
+
+      if (nodeRef != null && action != null) {
+        Runnable runnable = new QueueForIndexingWorker(nodeRef, action);
+        threadPoolExecutor.execute(runnable);
+      }
+    }
+
+    /**
+     * Updates the person user with additional details from KIV
+     */
+    public class QueueForIndexingWorker implements Runnable {
+      private NodeRef documentNodeRef;
+      private String action;
+
+      public QueueForIndexingWorker(NodeRef documentNodeRef, String action) {
+        this.documentNodeRef = documentNodeRef;
+        this.action = action;
+      }
+
+      /**
+       * Runner
+       */
+      public void run() {
+        AuthenticationUtil.runAs(new RunAsWork<Void>() {
+          public Void doWork() throws Exception {
+            return transactionService.getRetryingTransactionHelper().doInTransaction(new RetryingTransactionCallback<Void>() {
+
+              @Override
+              public Void execute() throws Throwable {
+                try {
+                searchIntegrationService.pushUpdateToIndexService(documentNodeRef, action);
+                } catch (Exception e) {
+                  LOG.error("Exception when handling update to index service", e);
+                  throw e;
+                }
+                return null;
+              }
+
+            }, false, true);
+
+          }
+        }, AuthenticationUtil.getSystemUserName());
+      }
+    }
+  }
 }
