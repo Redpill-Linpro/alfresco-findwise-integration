@@ -52,7 +52,7 @@ public class DefaultVerifierProcessor implements NodeVerifierProcessor, Initiali
       verified = false;
     } else if (dictionaryService.isSubClass(nodeService.getType(node), ContentModel.TYPE_FOLDER)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Node " + node + " ignored (" + nodeService.getType(node) + " is a folder-type)");
+        LOG.debug("Node " + node + " ignored, its a sub type of folder");
       }
 
       verified = false;
