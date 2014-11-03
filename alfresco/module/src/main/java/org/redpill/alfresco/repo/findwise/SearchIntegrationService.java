@@ -22,21 +22,40 @@
 
 package org.redpill.alfresco.repo.findwise;
 
+import java.util.Set;
+
 import org.alfresco.service.cmr.repository.NodeRef;
 import org.redpill.alfresco.repo.findwise.processor.NodeVerifierProcessor;
 
 public interface SearchIntegrationService {
-  
-  //public static final String ACTION_UPDATE = "update";
+
   public static final String ACTION_CREATE = "create";
   public static final String ACTION_DELETE = "delete";
-  
+
   /**
    * Push a node to the indexing service
-   * @param nodeRef The nodeRef
-   * @param action The action
+   * 
+   * @param nodeRef
+   *          The nodeRef
+   * @param action
+   *          The action
    */
   public void pushUpdateToIndexService(NodeRef nodeRef, String action);
-  
+
+  /**
+   * Push multiple nodes to the indexing service
+   * 
+   * @param nodeRefs
+   *          The nodeRefs
+   * @param action
+   *          The action
+   */
+  public void pushUpdateToIndexService(Set<NodeRef> nodeRefs, String action);
+
+  /**
+   * Set the node verifier processor programmatically to override the default
+   * 
+   * @param nodeVerifierProcessor
+   */
   public void setNodeVerifierProcessor(NodeVerifierProcessor nodeVerifierProcessor);
 }

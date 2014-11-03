@@ -22,6 +22,9 @@
 
 package org.redpill.alfresco.repo.findwise;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import org.alfresco.model.ContentModel;
@@ -138,6 +141,24 @@ public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePol
     return true;
   }
 
+  protected void addToQueue(final NodeRef nodeRef, final String key) {
+    AlfrescoTransactionSupport.bindListener(transactionListener);
+    Set<NodeRef> nodeRefs = (Set<NodeRef>) AlfrescoTransactionSupport.getResource(key);
+    if (nodeRefs == null) {
+      nodeRefs = new HashSet<NodeRef>(5);
+      AlfrescoTransactionSupport.bindResource(key, nodeRefs);
+    }
+    nodeRefs.add(nodeRef);
+  }
+
+  protected void addToCreateQueue(final NodeRef nodeRef) {
+    addToQueue(nodeRef, KEY_CREATE);
+  }
+
+  protected void addToDeleteQueue(final NodeRef nodeRef) {
+    addToQueue(nodeRef, KEY_DELETE);
+  }
+
   @Override
   public void onUpdateNode(NodeRef nodeRef) {
     if (LOG.isTraceEnabled()) {
@@ -146,8 +167,7 @@ public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePol
 
     if (isValidDocument(nodeRef)) {
       LOG.debug(nodeRef + " is a valid document which will be scheduled for indexing");
-      AlfrescoTransactionSupport.bindListener(transactionListener);
-      AlfrescoTransactionSupport.bindResource(KEY_CREATE, nodeRef);
+      addToCreateQueue(nodeRef);
     }
 
     if (LOG.isTraceEnabled()) {
@@ -163,8 +183,7 @@ public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePol
 
     if (isValidDocument(nodeRef)) {
       LOG.debug(nodeRef + " is a valid document which will be scheduled for indexing");
-      AlfrescoTransactionSupport.bindListener(transactionListener);
-      AlfrescoTransactionSupport.bindResource(KEY_CREATE, nodeRef);
+      addToCreateQueue(nodeRef);
     }
 
     if (LOG.isTraceEnabled()) {
@@ -181,8 +200,7 @@ public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePol
     NodeRef nodeRef = childAssocRef.getChildRef();
     if (isValidDocument(nodeRef)) {
       LOG.debug(nodeRef + " is a valid document which will be removed from index");
-      AlfrescoTransactionSupport.bindListener(transactionListener);
-      AlfrescoTransactionSupport.bindResource(KEY_DELETE, nodeRef);
+      addToDeleteQueue(nodeRef);
     }
 
     if (LOG.isTraceEnabled()) {
@@ -198,40 +216,38 @@ public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePol
 
     @Override
     public void afterCommit() {
-      NodeRef createdNodeRef = (NodeRef) AlfrescoTransactionSupport.getResource(KEY_CREATE);
-      NodeRef deletedNodeRef = (NodeRef) AlfrescoTransactionSupport.getResource(KEY_DELETE);
 
-      NodeRef nodeRef = null;
-      String action = null;
-      if (createdNodeRef != null) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Add to transaction queue for indexing " + createdNodeRef);
+      Set<NodeRef> createdNodeRefs = (Set<NodeRef>) AlfrescoTransactionSupport.getResource(KEY_CREATE);
+      Set<NodeRef> deletedNodeRefs = (Set<NodeRef>) AlfrescoTransactionSupport.getResource(KEY_DELETE);
+
+      if (createdNodeRefs != null && createdNodeRefs.size() > 0) {
+        Runnable runnable = new QueueForIndexingWorker(createdNodeRefs, SearchIntegrationService.ACTION_CREATE);
+        try {
+          threadPoolExecutor.execute(runnable);
+        } catch (RejectedExecutionException e) {
+          LOG.error("Could not spawn thread to handle indexing", e);
         }
-        action = SearchIntegrationService.ACTION_CREATE;
-        nodeRef = createdNodeRef;
-      } else if (deletedNodeRef != null) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Add to transaction queue for remove from indexing " + deletedNodeRef);
-        }
-        action = SearchIntegrationService.ACTION_DELETE;
-        nodeRef = deletedNodeRef;
       }
 
-      if (nodeRef != null && action != null) {
-        Runnable runnable = new QueueForIndexingWorker(nodeRef, action);
-        threadPoolExecutor.execute(runnable);
+      if (deletedNodeRefs != null && deletedNodeRefs.size() > 0) {
+        Runnable runnable = new QueueForIndexingWorker(deletedNodeRefs, SearchIntegrationService.ACTION_DELETE);
+        try {
+          threadPoolExecutor.execute(runnable);
+        } catch (RejectedExecutionException e) {
+          LOG.error("Could not spawn thread to handle removal of indexing", e);
+        }
       }
     }
 
     /**
-     * Updates the person user with additional details from KIV
+     * Worker which handles indexing of nodes
      */
     public class QueueForIndexingWorker implements Runnable {
-      private NodeRef documentNodeRef;
+      private Set<NodeRef> documentNodeRefs;
       private String action;
 
-      public QueueForIndexingWorker(NodeRef documentNodeRef, String action) {
-        this.documentNodeRef = documentNodeRef;
+      public QueueForIndexingWorker(Set<NodeRef> documentNodeRefs, String action) {
+        this.documentNodeRefs = documentNodeRefs;
         this.action = action;
       }
 
@@ -246,7 +262,7 @@ public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePol
               @Override
               public Void execute() throws Throwable {
                 try {
-                searchIntegrationService.pushUpdateToIndexService(documentNodeRef, action);
+                  searchIntegrationService.pushUpdateToIndexService(documentNodeRefs, action);
                 } catch (Exception e) {
                   LOG.error("Exception when handling update to index service", e);
                   throw e;
@@ -254,7 +270,7 @@ public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePol
                 return null;
               }
 
-            }, false, true);
+            }, false, false);
 
           }
         }, AuthenticationUtil.getSystemUserName());

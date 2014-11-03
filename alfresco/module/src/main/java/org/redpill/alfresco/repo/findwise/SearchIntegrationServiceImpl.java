@@ -27,13 +27,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.TimeZone;
+import java.util.Set;
 
 import org.alfresco.model.ContentModel;
 import org.alfresco.repo.policy.BehaviourFilter;
@@ -61,6 +60,7 @@ import org.redpill.alfresco.repo.findwise.bean.FindwiseObjectBean;
 import org.redpill.alfresco.repo.findwise.model.FindwiseIntegrationModel;
 import org.redpill.alfresco.repo.findwise.processor.NodeVerifierProcessor;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.extensions.surf.util.URLEncoder;
 import org.springframework.util.Assert;
 
 import com.google.gson.Gson;
@@ -122,6 +122,14 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
   }
 
   @Override
+  public void pushUpdateToIndexService(final Set<NodeRef> documentNodeRefs, final String action) {
+    Iterator<NodeRef> iterator = documentNodeRefs.iterator();
+    while (iterator.hasNext()) {
+      pushUpdateToIndexService(iterator.next(), action);
+    }
+  }
+
+  @Override
   public void pushUpdateToIndexService(final NodeRef nodeRef, final String action) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("pushUpdateToIndexService begin");
@@ -148,7 +156,7 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
       throw new UnsupportedOperationException(action + " is not a supported operation");
     }
 
-    if (send) {
+    if (send && ACTION_CREATE.equals(action)) {
       Gson gson = new Gson();
       String json = gson.toJson(fobs);
       if (LOG.isTraceEnabled()) {
@@ -178,12 +186,18 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
       } else {
         LOG.info("Push is disabled");
       }
+    } else if (send && ACTION_DELETE.equals(action)) {
+      if (Boolean.TRUE.equals(pushEnabled)) {
+        final boolean pushResult = doDelete(nodeRef);
+      } else {
+        LOG.info("Push is disabled");
+      }
     }
     if (LOG.isTraceEnabled()) {
       LOG.trace("pushUpdateToIndexService end");
     }
   }
-  
+
   protected boolean isPropertyAllowedToIndex(QName property) {
     if (ContentModel.PROP_AUTO_VERSION.equals(property)) {
       return false;
@@ -215,9 +229,7 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
         FindwiseFieldBean ffb = new FindwiseFieldBean();
         QName property = it.next();
         Serializable value = properties.get(property);
-        if (NamespaceService.SYSTEM_MODEL_1_0_URI.equals(property.getNamespaceURI()) ||
-            FindwiseIntegrationModel.URI.equals(property.getNamespaceURI()) ||
-            !isPropertyAllowedToIndex(property)) {
+        if (NamespaceService.SYSTEM_MODEL_1_0_URI.equals(property.getNamespaceURI()) || FindwiseIntegrationModel.URI.equals(property.getNamespaceURI()) || !isPropertyAllowedToIndex(property)) {
           if (LOG.isTraceEnabled()) {
             LOG.trace("Skiping property " + property.toString());
           }
@@ -246,9 +258,10 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
             LOG.trace("Converting " + property.toString() + " to date");
           }
           type = "string";
-          //SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-DDThh:mm:ssZ");
-          //sdf.setTimeZone(TimeZone.getTimeZone("UTC"));          
-          DateTime date = new DateTime( (Date) value, DateTimeZone.UTC );
+          // SimpleDateFormat sdf = new
+          // SimpleDateFormat("yyyy-MM-DDThh:mm:ssZ");
+          // sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+          DateTime date = new DateTime((Date) value, DateTimeZone.UTC);
           ffb.setValue(date.toString());
         } else if ("org.alfresco.service.cmr.repository.ContentData".equals(javaClassName)) {
           // Create Base64 data
@@ -323,26 +336,36 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
   }
 
   // TODO delete
-  protected boolean doDelete(final String json) {
+  protected boolean doDelete(final NodeRef nodeRef) {
     boolean result = false;
-    /*
-     * DefaultHttpClient httpclient = new DefaultHttpClient(); try { HttpDelete
-     * httpDelete = new HttpDelete(pushUrl); StringEntity entity = new
-     * StringEntity(json, "UTF-8"); httpDelete.setEntity(entity); httpDelete.set
-     * if (LOG.isDebugEnabled()) { LOG.debug("Executing request: " +
-     * httpDelete.getRequestLine()); } httpDelete.addHeader("Content-Type",
-     * "application/json;charset=UTF-8"); HttpResponse response =
-     * httpclient.execute(httpDelete); try { if (LOG.isDebugEnabled()) {
-     * LOG.debug("Response" + response.getStatusLine()); }
-     * EntityUtils.consume(response.getEntity()); result = true; } finally { //
-     * response.close(); } } catch (UnsupportedEncodingException e) {
-     * LOG.warn("Error transforming json to http entity. Json: " + json, e); }
-     * catch (Exception e) { LOG.warn("Error executing http post to " + pushUrl
-     * + " Json: " + json, e); } finally { /* try { //httpclient.close(); }
-     * catch (IOException e) { LOG.warn("Error making post to " + pushUrl, e); }
-     * 
-     * }
-     */
+    DefaultHttpClient httpclient = new DefaultHttpClient();
+    try {
+
+      String queryString = "?ids=" + URLEncoder.encode(nodeRef.toString());
+      HttpDelete httpDelete = new HttpDelete(pushUrl + queryString);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Executing request: " + httpDelete.getRequestLine());
+      }
+      httpDelete.addHeader("Content-Type", "application/json;charset=UTF-8");
+      HttpResponse response = httpclient.execute(httpDelete);
+      try {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Response" + response.getStatusLine());
+        }
+        EntityUtils.consume(response.getEntity());
+        result = true;
+      } finally {
+        // response.close();
+      }
+    } catch (Exception e) {
+      LOG.warn("Error executing http delete to " + pushUrl + " for " + nodeRef, e);
+    } finally {
+      /*
+       * try { //httpclient.close(); } catch (IOException e) {
+       * LOG.warn("Error making post to " + pushUrl, e); }
+       */
+    }
     return result;
   }
 
