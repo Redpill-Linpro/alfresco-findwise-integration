@@ -58,6 +58,7 @@ import org.jmock.Mockery;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.redpill.alfresco.repo.findwise.model.FindwiseIntegrationModel;
 import org.redpill.alfresco.repo.findwise.processor.NodeVerifierProcessor;
 
 import com.ibm.wsdl.util.IOUtils;
@@ -91,8 +92,8 @@ public class SearchIntegrationServiceImplTest {
     searchIntegrationService.setDictionaryService(dictionaryService);
     searchIntegrationService.setNamespaceService(namespaceService);
     searchIntegrationService.setContentService(contentService);
-    searchIntegrationService.setPushEnabled(false);
-    searchIntegrationService.setPushUrl("http://localhost:8083");
+    searchIntegrationService.setPushEnabled(true);
+    searchIntegrationService.setPushUrl("http://127.0.0.1:51234/dummy/noenpoint");
     searchIntegrationService.setNodeVerifierProcessor(nodeVerifierProcessor);
     searchIntegrationService.setBehaviourFilter(behaviourFilter);
 
@@ -177,6 +178,10 @@ public class SearchIntegrationServiceImplTest {
         will(returnValue(contentReader));
         oneOf(contentReader).getContentInputStream();
         will(returnValue(stream));
+        oneOf(behaviourFilter).disableBehaviour(nodeRef2);
+        oneOf(nodeService).setProperty(nodeRef2, FindwiseIntegrationModel.PROP_LAST_PUSH_FAILED, true);
+        oneOf(nodeService).setProperty(with(nodeRef2), with(FindwiseIntegrationModel.PROP_LAST_PUSH_TO_INDEX), with(any(Date.class)));
+        oneOf(behaviourFilter).enableBehaviour(nodeRef2);
       }
     });
     
