@@ -11,6 +11,8 @@
     <property name="pushUrl" value="${findwise.pushService}" />
     <property name="nodeVerifierProcessor" ref="findwise.verifierProcessor" />
     <property name="behaviourFilter" ref="policyBehaviourFilter" />
+    <property name="sysAdminParams" ref="sysAdminParams" />
+    <property name="siteService" ref="SiteService" />
   </bean>
   
   <bean id="findwise.service.SearchIntegrationService" class="org.redpill.alfresco.repo.findwise.SearchIntegrationServiceImpl" parent="findwise.service.AbstractSearchIntegrationService">

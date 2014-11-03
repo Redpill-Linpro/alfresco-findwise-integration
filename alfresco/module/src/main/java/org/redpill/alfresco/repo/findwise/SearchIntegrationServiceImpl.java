@@ -35,15 +35,21 @@ import java.util.Map;
 import java.util.Set;
 
 import org.alfresco.model.ContentModel;
+import org.alfresco.repo.admin.SysAdminParams;
+import org.alfresco.repo.i18n.StaticMessageLookup;
 import org.alfresco.repo.policy.BehaviourFilter;
+import org.alfresco.service.cmr.dictionary.ClassDefinition;
 import org.alfresco.service.cmr.dictionary.DictionaryService;
 import org.alfresco.service.cmr.dictionary.PropertyDefinition;
 import org.alfresco.service.cmr.repository.ContentReader;
 import org.alfresco.service.cmr.repository.ContentService;
 import org.alfresco.service.cmr.repository.NodeRef;
 import org.alfresco.service.cmr.repository.NodeService;
+import org.alfresco.service.cmr.site.SiteInfo;
+import org.alfresco.service.cmr.site.SiteService;
 import org.alfresco.service.namespace.NamespaceService;
 import org.alfresco.service.namespace.QName;
+import org.alfresco.util.UrlUtil;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
@@ -75,6 +81,8 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
   protected Boolean pushEnabled;
   protected String pushUrl;
   protected NodeVerifierProcessor nodeVerifierProcessor;
+  protected SysAdminParams sysAdminParams;
+  protected SiteService siteService;
 
   @Override
   public void afterPropertiesSet() throws Exception {
@@ -86,6 +94,16 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
     Assert.notNull(pushUrl);
     Assert.notNull(nodeVerifierProcessor);
     Assert.notNull(behaviourFilter);
+    Assert.notNull(sysAdminParams);
+    Assert.notNull(siteService);
+  }
+  
+  public void setSiteService(SiteService siteService) {
+    this.siteService = siteService;
+  }
+
+  public void setSysAdminParams(SysAdminParams sysAdminParams) {
+    this.sysAdminParams = sysAdminParams;
   }
 
   public void setBehaviourFilter(BehaviourFilter behaviourFilter) {
@@ -224,6 +242,54 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
 
       Map<QName, Serializable> properties = nodeService.getProperties(nodeRef);
       // TODO add node type property
+
+      // Get node type
+      QName nodeType = nodeService.getType(nodeRef);
+      String title = nodeType.toPrefixString(namespaceService);
+      /*ClassDefinition nodeDefinition = dictionaryService.getClass(nodeType);
+      String title = nodeDefinition.getTitle(new StaticMessageLookup());*/
+      FindwiseFieldBean typeTitleField = new FindwiseFieldBean();
+      typeTitleField.setName("type");
+      typeTitleField.setType("string");
+      typeTitleField.setValue(title);
+      fields.add(typeTitleField);
+
+      // Get site info
+      SiteInfo site = siteService.getSite(nodeRef);
+      String siteName = site.getTitle();
+      String siteShortName = site.getShortName();
+      FindwiseFieldBean siteNameField = new FindwiseFieldBean();
+      siteNameField.setName("siteName");
+      siteNameField.setType("string");
+      siteNameField.setValue(siteName);
+      fields.add(siteNameField);
+
+      FindwiseFieldBean siteShortNameField = new FindwiseFieldBean();
+      siteShortNameField.setName("siteShortName");
+      siteShortNameField.setType("string");
+      siteShortNameField.setValue(siteShortName);
+      fields.add(siteShortNameField);
+
+      // Get download & details url
+      String shareUrl = UrlUtil.getShareUrl(sysAdminParams);
+      String downloadPath = "/proxy/alfresco/api/node/content/" + nodeRef.toString().replace("://", "/");
+      downloadPath += "/" + URLEncoder.encode((String) properties.get(ContentModel.PROP_NAME));
+      downloadPath += "?a=true";
+      String downloadUrl = shareUrl + downloadPath;
+      FindwiseFieldBean downloadUrlField = new FindwiseFieldBean();
+      downloadUrlField.setName("downloadUrl");
+      downloadUrlField.setType("string");
+      downloadUrlField.setValue(downloadUrl);
+      fields.add(downloadUrlField);
+      
+      String detailsPath = "/page/site/" + siteShortName + "/document-details?nodeRef=" + URLEncoder.encode(nodeRef.toString());
+      String detailsUrl = shareUrl + detailsPath;
+      FindwiseFieldBean detailsUrlField = new FindwiseFieldBean();
+      detailsUrlField.setName("detailsUrl");
+      detailsUrlField.setType("string");
+      detailsUrlField.setValue(detailsUrl);
+      fields.add(detailsUrlField);
+      
       Iterator<QName> it = properties.keySet().iterator();
       while (it.hasNext()) {
         FindwiseFieldBean ffb = new FindwiseFieldBean();

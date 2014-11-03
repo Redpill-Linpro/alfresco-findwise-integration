@@ -37,7 +37,9 @@ import java.util.Map;
 import java.util.Set;
 
 import org.alfresco.model.ContentModel;
+import org.alfresco.repo.admin.SysAdminParams;
 import org.alfresco.repo.dictionary.IndexTokenisationMode;
+import org.alfresco.repo.i18n.StaticMessageLookup;
 import org.alfresco.repo.policy.BehaviourFilter;
 import org.alfresco.service.cmr.dictionary.ClassDefinition;
 import org.alfresco.service.cmr.dictionary.ConstraintDefinition;
@@ -51,6 +53,8 @@ import org.alfresco.service.cmr.repository.ContentReader;
 import org.alfresco.service.cmr.repository.ContentService;
 import org.alfresco.service.cmr.repository.NodeRef;
 import org.alfresco.service.cmr.repository.NodeService;
+import org.alfresco.service.cmr.site.SiteInfo;
+import org.alfresco.service.cmr.site.SiteService;
 import org.alfresco.service.namespace.NamespaceService;
 import org.alfresco.service.namespace.QName;
 import org.jmock.Expectations;
@@ -73,6 +77,10 @@ public class SearchIntegrationServiceImplTest {
   NodeVerifierProcessor nodeVerifierProcessor;
   BehaviourFilter behaviourFilter;
   ContentReader contentReader;
+  SysAdminParams sysAdminParams;
+  SiteService siteService;
+  ClassDefinition classDefinition;
+  SiteInfo siteInfo;
   Mockery m;
   final NodeRef nodeRef1 = new NodeRef("workspace://SpacesStore/nodeRef1");
   final NodeRef nodeRef2 = new NodeRef("workspace://SpacesStore/nodeRef2");
@@ -88,6 +96,10 @@ public class SearchIntegrationServiceImplTest {
     nodeVerifierProcessor = m.mock(NodeVerifierProcessor.class);
     behaviourFilter = m.mock(BehaviourFilter.class);
     contentReader = m.mock(ContentReader.class);
+    sysAdminParams = m.mock(SysAdminParams.class);
+    siteService = m.mock(SiteService.class);
+    classDefinition = m.mock(ClassDefinition.class);
+    siteInfo = m.mock(SiteInfo.class);
     searchIntegrationService.setNodeService(nodeService);
     searchIntegrationService.setDictionaryService(dictionaryService);
     searchIntegrationService.setNamespaceService(namespaceService);
@@ -96,7 +108,8 @@ public class SearchIntegrationServiceImplTest {
     searchIntegrationService.setPushUrl("http://127.0.0.1:51234/dummy/noenpoint");
     searchIntegrationService.setNodeVerifierProcessor(nodeVerifierProcessor);
     searchIntegrationService.setBehaviourFilter(behaviourFilter);
-
+    searchIntegrationService.setSysAdminParams(sysAdminParams);
+    searchIntegrationService.setSiteService(siteService);
     searchIntegrationService.afterPropertiesSet();
   }
 
@@ -156,6 +169,9 @@ public class SearchIntegrationServiceImplTest {
     final Set<String> prefixes = new HashSet<String>();
     prefixes.add("cm");
     final InputStream stream = new ByteArrayInputStream("test data".getBytes(StandardCharsets.UTF_8));
+    
+    
+    
     m.checking(new Expectations() {
       {
         allowing(nodeService).exists(nodeRef1);
@@ -182,6 +198,28 @@ public class SearchIntegrationServiceImplTest {
         oneOf(nodeService).setProperty(nodeRef2, FindwiseIntegrationModel.PROP_LAST_PUSH_FAILED, true);
         oneOf(nodeService).setProperty(with(nodeRef2), with(FindwiseIntegrationModel.PROP_LAST_PUSH_TO_INDEX), with(any(Date.class)));
         oneOf(behaviourFilter).enableBehaviour(nodeRef2);
+        oneOf(nodeService).getType(nodeRef2);
+        will(returnValue(ContentModel.TYPE_CONTENT));
+        //oneOf(dictionaryService).getClass(ContentModel.TYPE_CONTENT);
+        //will(returnValue(classDefinition));
+        //oneOf(classDefinition).getTitle(with(any(StaticMessageLookup.class)));
+        //will(returnValue("CustomType name"));
+        oneOf(siteService).getSite(nodeRef2);
+        will(returnValue(siteInfo));
+        oneOf(siteInfo).getTitle();
+        will(returnValue("Site title"));
+        oneOf(siteInfo).getShortName();
+        will(returnValue("asite"));
+        oneOf(sysAdminParams).getShareProtocol();
+        will(returnValue("http"));
+        oneOf(sysAdminParams).getShareHost();
+        will(returnValue("localhost"));
+        oneOf(sysAdminParams).getSharePort();
+        will(returnValue(8081));
+        oneOf(sysAdminParams).getShareContext();
+        will(returnValue("share"));
+        
+        
       }
     });
     
