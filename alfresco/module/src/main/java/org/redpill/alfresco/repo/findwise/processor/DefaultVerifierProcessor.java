@@ -27,8 +27,10 @@ import org.alfresco.service.cmr.dictionary.DictionaryService;
 import org.alfresco.service.cmr.repository.NodeRef;
 import org.alfresco.service.cmr.repository.NodeService;
 import org.apache.log4j.Logger;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.util.Assert;
 
-public class DefaultVerifierProcessor implements NodeVerifierProcessor {
+public class DefaultVerifierProcessor implements NodeVerifierProcessor, InitializingBean {
 
   private static final Logger LOG = Logger.getLogger(DefaultVerifierProcessor.class);
 
@@ -48,9 +50,7 @@ public class DefaultVerifierProcessor implements NodeVerifierProcessor {
         LOG.debug("Node " + node + " ignored (node does not exist)");
       }
       verified = false;
-    }
-
-    if (dictionaryService.isSubClass(nodeService.getType(node), ContentModel.TYPE_FOLDER)) {
+    } else if (dictionaryService.isSubClass(nodeService.getType(node), ContentModel.TYPE_FOLDER)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Node " + node + " ignored (" + nodeService.getType(node) + " is a folder-type)");
       }
@@ -67,5 +67,11 @@ public class DefaultVerifierProcessor implements NodeVerifierProcessor {
 
   public void setDictionaryService(DictionaryService dictionaryService) {
     this.dictionaryService = dictionaryService;
+  }
+
+  @Override
+  public void afterPropertiesSet() throws Exception {
+    Assert.notNull(nodeService);
+    Assert.notNull(dictionaryService);    
   }
 }
