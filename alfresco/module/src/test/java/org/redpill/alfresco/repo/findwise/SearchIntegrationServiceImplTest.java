@@ -39,7 +39,6 @@ import java.util.Set;
 import org.alfresco.model.ContentModel;
 import org.alfresco.repo.admin.SysAdminParams;
 import org.alfresco.repo.dictionary.IndexTokenisationMode;
-import org.alfresco.repo.i18n.StaticMessageLookup;
 import org.alfresco.repo.policy.BehaviourFilter;
 import org.alfresco.service.cmr.dictionary.ClassDefinition;
 import org.alfresco.service.cmr.dictionary.ConstraintDefinition;
@@ -53,6 +52,7 @@ import org.alfresco.service.cmr.repository.ContentReader;
 import org.alfresco.service.cmr.repository.ContentService;
 import org.alfresco.service.cmr.repository.NodeRef;
 import org.alfresco.service.cmr.repository.NodeService;
+import org.alfresco.service.cmr.security.PersonService;
 import org.alfresco.service.cmr.site.SiteInfo;
 import org.alfresco.service.cmr.site.SiteService;
 import org.alfresco.service.namespace.NamespaceService;
@@ -64,8 +64,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.redpill.alfresco.repo.findwise.model.FindwiseIntegrationModel;
 import org.redpill.alfresco.repo.findwise.processor.NodeVerifierProcessor;
-
-import com.ibm.wsdl.util.IOUtils;
 
 public class SearchIntegrationServiceImplTest {
 
@@ -81,6 +79,7 @@ public class SearchIntegrationServiceImplTest {
   SiteService siteService;
   ClassDefinition classDefinition;
   SiteInfo siteInfo;
+  PersonService personService;
   Mockery m;
   final NodeRef nodeRef1 = new NodeRef("workspace://SpacesStore/nodeRef1");
   final NodeRef nodeRef2 = new NodeRef("workspace://SpacesStore/nodeRef2");
@@ -100,6 +99,7 @@ public class SearchIntegrationServiceImplTest {
     siteService = m.mock(SiteService.class);
     classDefinition = m.mock(ClassDefinition.class);
     siteInfo = m.mock(SiteInfo.class);
+    personService = m.mock(PersonService.class);
     searchIntegrationService.setNodeService(nodeService);
     searchIntegrationService.setDictionaryService(dictionaryService);
     searchIntegrationService.setNamespaceService(namespaceService);
@@ -110,6 +110,7 @@ public class SearchIntegrationServiceImplTest {
     searchIntegrationService.setBehaviourFilter(behaviourFilter);
     searchIntegrationService.setSysAdminParams(sysAdminParams);
     searchIntegrationService.setSiteService(siteService);
+    searchIntegrationService.setPersonService(personService);
     searchIntegrationService.afterPropertiesSet();
   }
 
@@ -156,22 +157,25 @@ public class SearchIntegrationServiceImplTest {
   @Test
   public void pushCreateToIndexService() throws Exception {
     searchIntegrationService.afterPropertiesSet();
+    final Map<QName, Serializable> personProperties = new HashMap<QName, Serializable>();
+    
+    
     final Map<QName, Serializable> properties = new HashMap<QName, Serializable>();
     properties.put(ContentModel.PROP_NAME, "Name.txt");
     properties.put(ContentModel.PROP_CREATED, new Date());
+    properties.put(ContentModel.PROP_CREATOR, "admin");
+    properties.put(ContentModel.PROP_MODIFIER, "admin");
     ContentData contentData = new ContentData("/test.txt", "text/text", 0L, "UTF-8");
     properties.put(ContentModel.PROP_CONTENT, contentData);
 
     final PropertyDefinition stringDef = new MockPropertyDefinition("java.lang.String");
     final PropertyDefinition dateDef = new MockPropertyDefinition("java.util.Date");
     final PropertyDefinition contentDef = new MockPropertyDefinition("org.alfresco.service.cmr.repository.ContentData");
-
+    final NodeRef personNodeRef = new NodeRef("workspace://SpacesStore/person1");
     final Set<String> prefixes = new HashSet<String>();
     prefixes.add("cm");
     final InputStream stream = new ByteArrayInputStream("test data".getBytes(StandardCharsets.UTF_8));
-    
-    
-    
+
     m.checking(new Expectations() {
       {
         allowing(nodeService).exists(nodeRef1);
@@ -181,6 +185,10 @@ public class SearchIntegrationServiceImplTest {
         oneOf(nodeService).getProperties(nodeRef2);
         will(returnValue(properties));
         oneOf(dictionaryService).getProperty(ContentModel.PROP_NAME);
+        will(returnValue(stringDef));
+        oneOf(dictionaryService).getProperty(ContentModel.PROP_CREATOR);
+        will(returnValue(stringDef));
+        oneOf(dictionaryService).getProperty(ContentModel.PROP_MODIFIER);
         will(returnValue(stringDef));
         oneOf(dictionaryService).getProperty(ContentModel.PROP_CREATED);
         will(returnValue(dateDef));
@@ -200,10 +208,10 @@ public class SearchIntegrationServiceImplTest {
         oneOf(behaviourFilter).enableBehaviour(nodeRef2);
         oneOf(nodeService).getType(nodeRef2);
         will(returnValue(ContentModel.TYPE_CONTENT));
-        //oneOf(dictionaryService).getClass(ContentModel.TYPE_CONTENT);
-        //will(returnValue(classDefinition));
-        //oneOf(classDefinition).getTitle(with(any(StaticMessageLookup.class)));
-        //will(returnValue("CustomType name"));
+        // oneOf(dictionaryService).getClass(ContentModel.TYPE_CONTENT);
+        // will(returnValue(classDefinition));
+        // oneOf(classDefinition).getTitle(with(any(StaticMessageLookup.class)));
+        // will(returnValue("CustomType name"));
         oneOf(siteService).getSite(nodeRef2);
         will(returnValue(siteInfo));
         oneOf(siteInfo).getTitle();
@@ -219,37 +227,43 @@ public class SearchIntegrationServiceImplTest {
         oneOf(sysAdminParams).getShareContext();
         will(returnValue("share"));
         
+        allowing(personService).getPersonOrNull("admin");
+        will(returnValue(personNodeRef));
         
+        allowing(nodeService).getProperties(personNodeRef);
+        will(returnValue(personProperties));
       }
     });
-    
+
     searchIntegrationService.pushUpdateToIndexService(nodeRef1, SearchIntegrationService.ACTION_CREATE);
-    
+
     Set<NodeRef> set = new HashSet<NodeRef>(1);
     set.add(nodeRef2);
     searchIntegrationService.pushUpdateToIndexService(set, SearchIntegrationService.ACTION_CREATE);
 
     m.assertIsSatisfied();
   }
-  
+
   @Test
   public void pushDeleteToIndexService() throws Exception {
     searchIntegrationService.afterPropertiesSet();
-     
+
     searchIntegrationService.pushUpdateToIndexService(nodeRef1, SearchIntegrationService.ACTION_DELETE);
-    
+
     Set<NodeRef> set = new HashSet<NodeRef>(1);
     set.add(nodeRef2);
     searchIntegrationService.pushUpdateToIndexService(set, SearchIntegrationService.ACTION_DELETE);
 
     m.assertIsSatisfied();
   }
-  
+
   class MockPropertyDefinition implements PropertyDefinition {
     public String javaClassName = "";
+
     MockPropertyDefinition(String javaClassName) {
       this.javaClassName = javaClassName;
     }
+
     @Override
     public ModelDefinition getModel() {
       // TODO Auto-generated method stub

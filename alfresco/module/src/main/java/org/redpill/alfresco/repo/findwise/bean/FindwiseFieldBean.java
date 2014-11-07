@@ -30,6 +30,16 @@ public class FindwiseFieldBean implements Serializable {
   private String type;
   private Serializable value;
 
+  public FindwiseFieldBean() {
+
+  }
+
+  public FindwiseFieldBean(String name, String type, String value) {
+    this.name = name;
+    this.type = type;
+    this.value = value;
+  }
+
   public String getName() {
     return name;
   }

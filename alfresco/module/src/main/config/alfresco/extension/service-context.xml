@@ -13,6 +13,7 @@
     <property name="behaviourFilter" ref="policyBehaviourFilter" />
     <property name="sysAdminParams" ref="sysAdminParams" />
     <property name="siteService" ref="SiteService" />
+    <property name="personService" ref="PersonService" />
   </bean>
   
   <bean id="findwise.service.SearchIntegrationService" class="org.redpill.alfresco.repo.findwise.SearchIntegrationServiceImpl" parent="findwise.service.AbstractSearchIntegrationService">

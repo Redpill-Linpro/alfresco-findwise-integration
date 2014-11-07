@@ -44,6 +44,8 @@ import org.alfresco.service.cmr.repository.ContentReader;
 import org.alfresco.service.cmr.repository.ContentService;
 import org.alfresco.service.cmr.repository.NodeRef;
 import org.alfresco.service.cmr.repository.NodeService;
+import org.alfresco.service.cmr.security.PersonService;
+import org.alfresco.service.cmr.security.PersonService.PersonInfo;
 import org.alfresco.service.cmr.site.SiteInfo;
 import org.alfresco.service.cmr.site.SiteService;
 import org.alfresco.service.namespace.NamespaceService;
@@ -82,6 +84,7 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
   protected NodeVerifierProcessor nodeVerifierProcessor;
   protected SysAdminParams sysAdminParams;
   protected SiteService siteService;
+  protected PersonService personService;
 
   @Override
   public void afterPropertiesSet() throws Exception {
@@ -95,6 +98,11 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
     Assert.notNull(behaviourFilter);
     Assert.notNull(sysAdminParams);
     Assert.notNull(siteService);
+    Assert.notNull(personService);
+  }
+
+  public void setPersonService(PersonService personService) {
+    this.personService = personService;
   }
 
   public void setSiteService(SiteService siteService) {
@@ -240,36 +248,18 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
       List<FindwiseFieldBean> fields = new ArrayList<FindwiseFieldBean>();
 
       Map<QName, Serializable> properties = nodeService.getProperties(nodeRef);
-      // TODO add node type property
 
       // Get node type
       QName nodeType = nodeService.getType(nodeRef);
       String title = nodeType.toPrefixString(namespaceService);
-      /*
-       * ClassDefinition nodeDefinition = dictionaryService.getClass(nodeType);
-       * String title = nodeDefinition.getTitle(new StaticMessageLookup());
-       */
-      FindwiseFieldBean typeTitleField = new FindwiseFieldBean();
-      typeTitleField.setName("type");
-      typeTitleField.setType("string");
-      typeTitleField.setValue(title);
-      fields.add(typeTitleField);
+      fields.add(new FindwiseFieldBean("type", "string", title));
 
       // Get site info
       SiteInfo site = siteService.getSite(nodeRef);
       String siteName = site.getTitle();
       String siteShortName = site.getShortName();
-      FindwiseFieldBean siteNameField = new FindwiseFieldBean();
-      siteNameField.setName("siteName");
-      siteNameField.setType("string");
-      siteNameField.setValue(siteName);
-      fields.add(siteNameField);
-
-      FindwiseFieldBean siteShortNameField = new FindwiseFieldBean();
-      siteShortNameField.setName("siteShortName");
-      siteShortNameField.setType("string");
-      siteShortNameField.setValue(siteShortName);
-      fields.add(siteShortNameField);
+      fields.add(new FindwiseFieldBean("siteName", "string", siteName));
+      fields.add(new FindwiseFieldBean("siteShortName", "string", siteShortName));
 
       // Get download & details url
       String shareUrl = UrlUtil.getShareUrl(sysAdminParams);
@@ -277,19 +267,54 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
       downloadPath += "/" + URLEncoder.encode((String) properties.get(ContentModel.PROP_NAME));
       downloadPath += "?a=true";
       String downloadUrl = shareUrl + downloadPath;
-      FindwiseFieldBean downloadUrlField = new FindwiseFieldBean();
-      downloadUrlField.setName("downloadUrl");
-      downloadUrlField.setType("string");
-      downloadUrlField.setValue(downloadUrl);
-      fields.add(downloadUrlField);
-
       String detailsPath = "/page/site/" + siteShortName + "/document-details?nodeRef=" + URLEncoder.encode(nodeRef.toString());
       String detailsUrl = shareUrl + detailsPath;
-      FindwiseFieldBean detailsUrlField = new FindwiseFieldBean();
-      detailsUrlField.setName("detailsUrl");
-      detailsUrlField.setType("string");
-      detailsUrlField.setValue(detailsUrl);
-      fields.add(detailsUrlField);
+      fields.add(new FindwiseFieldBean("downloadUrl", "string", downloadUrl));
+      fields.add(new FindwiseFieldBean("detailsUrl", "string", detailsUrl));
+
+      // Add more user info for creator
+      NodeRef creatorNodeRef = personService.getPersonOrNull((String) properties.get(ContentModel.PROP_CREATOR));
+      if (creatorNodeRef != null) {
+        Map<QName, Serializable> personProperties = nodeService.getProperties(creatorNodeRef);
+        String firstName = (String) personProperties.get(ContentModel.PROP_FIRSTNAME);
+        if (firstName == null) {
+          firstName = "";
+        }
+        fields.add(new FindwiseFieldBean("creatorFirstName", "string", firstName));
+        String lastName = (String) personProperties.get(ContentModel.PROP_LASTNAME);
+        if (lastName == null) {
+          lastName = "";
+        }
+        fields.add(new FindwiseFieldBean("creatorLastName", "string", lastName));
+        fields.add(new FindwiseFieldBean("creatorFullName", "string", firstName + " " + lastName));
+        String email = (String) personProperties.get(ContentModel.PROP_EMAIL);
+        if (email == null) {
+          email = "";
+        }
+        fields.add(new FindwiseFieldBean("creatorEmail", "string", email));
+      }
+
+      // Add more user info for modifier
+      NodeRef modifierNodeRef = personService.getPersonOrNull((String) properties.get(ContentModel.PROP_MODIFIER));
+      if (modifierNodeRef != null) {
+        Map<QName, Serializable> personProperties = nodeService.getProperties(modifierNodeRef);
+        String firstName = (String) personProperties.get(ContentModel.PROP_FIRSTNAME);
+        if (firstName == null) {
+          firstName = "";
+        }
+        fields.add(new FindwiseFieldBean("modifierFirstName", "string", firstName));
+        String lastName = (String) personProperties.get(ContentModel.PROP_LASTNAME);
+        if (lastName == null) {
+          lastName = "";
+        }
+        fields.add(new FindwiseFieldBean("modifierLastName", "string", lastName));
+        fields.add(new FindwiseFieldBean("modifierFullName", "string", firstName + " " + lastName));
+        String email = (String) personProperties.get(ContentModel.PROP_EMAIL);
+        if (email == null) {
+          email = "";
+        }
+        fields.add(new FindwiseFieldBean("modifierEmail", "string", email));
+      }
 
       Iterator<QName> it = properties.keySet().iterator();
       while (it.hasNext()) {
@@ -307,10 +332,11 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
         }
         String javaClassName = "unknown";
         PropertyDefinition propertyDefinition = dictionaryService.getProperty(property);
-        //The following condition is needed to properly handle residual properties
-        if (propertyDefinition!=null ) {
+        // The following condition is needed to properly handle residual
+        // properties
+        if (propertyDefinition != null) {
           DataTypeDefinition dataType = propertyDefinition.getDataType();
-          if (dataType!=null) {
+          if (dataType != null) {
             javaClassName = dataType.getJavaClassName();
           }
         }
@@ -335,9 +361,6 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
             LOG.trace("Converting " + property.toString() + " to date");
           }
           type = "string";
-          // SimpleDateFormat sdf = new
-          // SimpleDateFormat("yyyy-MM-DDThh:mm:ssZ");
-          // sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
           DateTime date = new DateTime((Date) value, DateTimeZone.UTC);
           ffb.setValue(date.toString());
         } else if ("org.alfresco.service.cmr.repository.ContentData".equals(javaClassName)) {
