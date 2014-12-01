@@ -1,31 +1,38 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>org.redpill-linpro.alfresco</groupId>
+    <groupId>org.redpill-linpro.alfresco.findwise</groupId>
     <artifactId>findwise-integration</artifactId>
-    <version>1.0.0</version>
+    <version>4.1.9.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>findwise-integration-repo</artifactId>
-  <packaging>amp</packaging>
-  <name>Alfresco Repository AMP Module</name>
-
-  <properties>
-    <module.id>findwise-repo</module.id>
-    <!-- This property allow to switch Repo AMP vs Share AMP. Set alfresco.client.war=share to run this AMP against Share -->
-    <alfresco.client.war>alfresco</alfresco.client.war>
-    <tomcat.home>${tomcat.repo.home}</tomcat.home>
-    <tomcat.port>${tomcat.repo.port}</tomcat.port>
-  </properties>
+  <packaging>jar</packaging>
+  <name>Alfresco Repository - Findwise integration framework</name>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>${alfresco.groupId}</groupId>
+        <artifactId>alfresco-platform-distribution</artifactId>
+        <version>${alfresco.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
+
     <dependency>
       <groupId>${alfresco.groupId}</groupId>
       <artifactId>alfresco-repository</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>${alfresco.groupId}</groupId>
+      <artifactId>alfresco-remote-api</artifactId>
     </dependency>
 
     <dependency>
@@ -40,12 +47,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.redpill-linpro.alfresco</groupId>
-      <artifactId>alfresco-test-repo</artifactId>
-      <version>1.0.0</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
       <version>2.2.4</version>
@@ -56,6 +57,114 @@
       <version>4.1.1</version>
       <scope>provided</scope>
     </dependency>
+
   </dependencies>
+
+  <issueManagement>
+    <system>Google Code</system>
+    <url>http://code.google.com/p/alfresco-metadata-writer/issues/list</url>
+  </issueManagement>
+
+  <organization>
+    <name>Redpill Linpro</name>
+    <url>http://www.redpill-linpro.com</url>
+  </organization>
+
+  <build>
+    <finalName>${project.artifactId}-${project.version}</finalName>
+
+    <resources>
+      <resource>
+        <directory>src/main/config</directory>
+        <includes>
+          <include>**/*.xml</include>
+          <include>**/*.properties</include>
+        </includes>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.8</version>
+        <executions>
+          <execution>
+            <id>parse-version</id>
+            <goals>
+              <goal>parse-version</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.2.1</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.9.1</version>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <quiet>true</quiet>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <includes>
+            <include>**/*.class</include>
+            <include>**/*.xml</include>
+            <include>**/*.properties</include>
+          </includes>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <descriptors>
+            <descriptor>src/assembly/dist.xml</descriptor>
+          </descriptors>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <repositories>
+    <repository>
+      <id>redpill-public</id>
+      <url>https://maven.redpill-linpro.com/nexus/content/groups/public</url>
+    </repository>
+  </repositories>
 
 </project>
