@@ -26,5 +26,6 @@
   <bean id="findwise.verifierProcessor" class="org.redpill.alfresco.repo.findwise.processor.DefaultVerifierProcessor">
     <property name="nodeService" ref="NodeService" />
     <property name="dictionaryService" ref="DictionaryService" />
+    <property name="maxFileSize" value="${findwise.maxFileSize}" />
   </bean>
 </beans>

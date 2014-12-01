@@ -24,6 +24,8 @@ package org.redpill.alfresco.repo.findwise.processor;
 
 import org.alfresco.model.ContentModel;
 import org.alfresco.service.cmr.dictionary.DictionaryService;
+import org.alfresco.service.cmr.repository.ContentReader;
+import org.alfresco.service.cmr.repository.ContentService;
 import org.alfresco.service.cmr.repository.NodeRef;
 import org.alfresco.service.cmr.repository.NodeService;
 import org.apache.log4j.Logger;
@@ -36,6 +38,8 @@ public class DefaultVerifierProcessor implements NodeVerifierProcessor, Initiali
 
   protected NodeService nodeService;
   protected DictionaryService dictionaryService;
+  protected ContentService contentService;
+  protected Long maxFileSize;
 
   public boolean verifyDocument(final NodeRef node) {
 
@@ -49,16 +53,23 @@ public class DefaultVerifierProcessor implements NodeVerifierProcessor, Initiali
       if (LOG.isDebugEnabled()) {
         LOG.debug("Node " + node + " ignored (node does not exist)");
       }
-      verified = false;
+      return false;
     } else if (dictionaryService.isSubClass(nodeService.getType(node), ContentModel.TYPE_FOLDER)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Node " + node + " ignored, its a sub type of folder");
       }
 
-      verified = false;
+      return false;
     }
 
-    return verified;
+    ContentReader reader = contentService.getReader(node, ContentModel.PROP_CONTENT);
+    if (reader.getSize() > maxFileSize) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("File size for node " + node + " is too big");
+      }
+      return false;
+    }
+    return true;
   }
 
   public void setNodeService(NodeService nodeService) {
@@ -69,9 +80,19 @@ public class DefaultVerifierProcessor implements NodeVerifierProcessor, Initiali
     this.dictionaryService = dictionaryService;
   }
 
+  public void setMaxFileSize(Long maxFileSize) {
+    this.maxFileSize = maxFileSize;
+  }
+
+  public void setContentService(ContentService contentService) {
+    this.contentService = contentService;
+  }
+
   @Override
   public void afterPropertiesSet() throws Exception {
     Assert.notNull(nodeService);
-    Assert.notNull(dictionaryService);    
+    Assert.notNull(dictionaryService);
+    Assert.notNull(contentService);
+    Assert.notNull(maxFileSize);
   }
 }
