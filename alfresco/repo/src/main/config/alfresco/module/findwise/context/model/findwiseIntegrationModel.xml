@@ -33,6 +33,12 @@
           <mandatory>false</mandatory>
           <default>false</default>
         </property>
+        <property name="fwi:inIndex">
+          <title>Last Push Failed?</title>
+          <type>d:boolean</type>
+          <mandatory>false</mandatory>
+          <default>false</default>
+        </property>        
       </properties>
     </aspect>
   </aspects>

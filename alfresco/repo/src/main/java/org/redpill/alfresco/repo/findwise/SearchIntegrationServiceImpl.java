@@ -154,32 +154,40 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
   }
 
   @Override
-  public void pushUpdateToIndexService(final NodeRef nodeRef, final String action) {
+  public void pushUpdateToIndexService(final NodeRef nodeRef, String action) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("pushUpdateToIndexService begin");
     }
 
     boolean send = false;
     List<FindwiseObjectBean> fobs = new ArrayList<FindwiseObjectBean>();
-
+    if (!ACTION_CREATE.equals(action) && !ACTION_DELETE.equals(action)) {
+      throw new UnsupportedOperationException(action + " is not a supported operation");
+    }
+    
     if (ACTION_CREATE.equals(action)) {
       if (nodeRef == null || !nodeService.exists(nodeRef)) {
         LOG.debug(nodeRef + " does not exist");
       } else if (!nodeVerifierProcessor.verifyDocument(nodeRef)) {
-        LOG.debug(nodeRef + " did not pass final node verification");
+        Boolean isInIndex = (Boolean) nodeService.getProperty(nodeRef, FindwiseIntegrationModel.PROP_IN_INDEX);
+        if (Boolean.TRUE.equals(isInIndex)) {
+          action = ACTION_DELETE;
+        } else {
+          LOG.debug(nodeRef + " did not pass final node verification");
+        }
       } else {
         FindwiseObjectBean fob = createFindwiseObjectBean(nodeRef, false);
         fobs.add(fob);
         send = true;
       }
-    } else if (ACTION_DELETE.equals(action)) {
+    }
+
+    if (ACTION_DELETE.equals(action)) {
       FindwiseObjectBean fob = createFindwiseObjectBean(nodeRef, true);
       fobs.add(fob);
       send = true;
-    } else {
-      throw new UnsupportedOperationException(action + " is not a supported operation");
-    }
-
+    } 
+    boolean pushResult = false;
     if (send && ACTION_CREATE.equals(action)) {
       Gson gson = new Gson();
       String json = gson.toJson(fobs);
@@ -191,32 +199,35 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
         }
       }
       if (Boolean.TRUE.equals(pushEnabled)) {
-        final boolean pushResult = doPost(json);
-        if (nodeService.exists(nodeRef)) {
-          LOG.debug("Setting push result on node " + nodeRef);
-
-          behaviourFilter.disableBehaviour(nodeRef);
-
-          nodeService.setProperty(nodeRef, FindwiseIntegrationModel.PROP_LAST_PUSH_TO_INDEX, new Date());
-          if (pushResult == true) {
-            // Success
-            nodeService.setProperty(nodeRef, FindwiseIntegrationModel.PROP_LAST_PUSH_FAILED, false);
-          } else {
-            // Failed
-            nodeService.setProperty(nodeRef, FindwiseIntegrationModel.PROP_LAST_PUSH_FAILED, true);
-          }
-          behaviourFilter.enableBehaviour(nodeRef);
-        }
+        pushResult = doPost(json);
       } else {
         LOG.info("Push is disabled");
       }
     } else if (send && ACTION_DELETE.equals(action)) {
       if (Boolean.TRUE.equals(pushEnabled)) {
-        final boolean pushResult = doDelete(nodeRef);
+        pushResult = doDelete(nodeRef);
       } else {
         LOG.info("Push is disabled");
       }
     }
+
+    if (send && nodeService.exists(nodeRef) && !nodeService.hasAspect(nodeRef, ContentModel.ASPECT_PENDING_DELETE)) {
+      LOG.debug("Setting push result on node " + nodeRef);
+
+      behaviourFilter.disableBehaviour(nodeRef);
+
+      nodeService.setProperty(nodeRef, FindwiseIntegrationModel.PROP_LAST_PUSH_TO_INDEX, new Date());
+      if (pushResult == true) {
+        // Success
+        nodeService.setProperty(nodeRef, FindwiseIntegrationModel.PROP_LAST_PUSH_FAILED, false);
+        nodeService.setProperty(nodeRef, FindwiseIntegrationModel.PROP_IN_INDEX, !ACTION_DELETE.equals(action));
+      } else {
+        // Failed
+        nodeService.setProperty(nodeRef, FindwiseIntegrationModel.PROP_LAST_PUSH_FAILED, true);
+      }
+      behaviourFilter.enableBehaviour(nodeRef);
+    }
+
     if (LOG.isTraceEnabled()) {
       LOG.trace("pushUpdateToIndexService end");
     }

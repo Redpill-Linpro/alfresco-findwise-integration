@@ -145,8 +145,33 @@ public class SearchIntegrationServiceImplTest {
       {
         allowing(nodeService).exists(nodeRef1);
         will(returnValue(true));
-        allowing(nodeVerifierProcessor).verifyDocument(nodeRef1);
+        oneOf(nodeVerifierProcessor).verifyDocument(nodeRef1);
         will(returnValue(false));
+        oneOf(nodeService).getProperty(nodeRef1, FindwiseIntegrationModel.PROP_IN_INDEX);
+        will(returnValue(false));
+      }
+    });
+    searchIntegrationService.pushUpdateToIndexService(nodeRef1, SearchIntegrationService.ACTION_CREATE);
+
+    m.assertIsSatisfied();
+  }
+  
+  @Test
+  public void deleteOnUpdateWhenVerifyFailsAndIsInIndex() throws Exception {
+    m.checking(new Expectations() {
+      {
+        allowing(nodeService).exists(nodeRef1);
+        will(returnValue(true));
+        oneOf(nodeVerifierProcessor).verifyDocument(nodeRef1);
+        will(returnValue(false));
+        oneOf(nodeService).getProperty(nodeRef1, FindwiseIntegrationModel.PROP_IN_INDEX);
+        will(returnValue(true));
+        oneOf(nodeService).hasAspect(nodeRef1, ContentModel.ASPECT_PENDING_DELETE);
+        will(returnValue(false));
+        oneOf(behaviourFilter).disableBehaviour(nodeRef1);
+        oneOf(nodeService).setProperty(nodeRef1, FindwiseIntegrationModel.PROP_LAST_PUSH_FAILED, true);
+        oneOf(nodeService).setProperty(with(nodeRef1), with(FindwiseIntegrationModel.PROP_LAST_PUSH_TO_INDEX), with(any(Date.class)));
+        oneOf(behaviourFilter).enableBehaviour(nodeRef1);
       }
     });
     searchIntegrationService.pushUpdateToIndexService(nodeRef1, SearchIntegrationService.ACTION_CREATE);
@@ -232,6 +257,9 @@ public class SearchIntegrationServiceImplTest {
         
         allowing(nodeService).getProperties(personNodeRef);
         will(returnValue(personProperties));
+        
+        allowing(nodeService).hasAspect(nodeRef2, ContentModel.ASPECT_PENDING_DELETE);
+        will(returnValue(false));
       }
     });
 
@@ -247,7 +275,21 @@ public class SearchIntegrationServiceImplTest {
   @Test
   public void pushDeleteToIndexService() throws Exception {
     searchIntegrationService.afterPropertiesSet();
+    m.checking(new Expectations() {
+      {
+        allowing(nodeService).exists(nodeRef1);
+        will(returnValue(true));
 
+        allowing(nodeService).exists(nodeRef2);
+        will(returnValue(true));
+        
+        allowing(nodeService).hasAspect(nodeRef1, ContentModel.ASPECT_PENDING_DELETE);
+        will(returnValue(true));
+        
+        allowing(nodeService).hasAspect(nodeRef2, ContentModel.ASPECT_PENDING_DELETE);
+        will(returnValue(true));
+      }
+    });
     searchIntegrationService.pushUpdateToIndexService(nodeRef1, SearchIntegrationService.ACTION_DELETE);
 
     Set<NodeRef> set = new HashSet<NodeRef>(1);

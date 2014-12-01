@@ -31,4 +31,5 @@ public interface FindwiseIntegrationModel {
   public final QName ASPECT_FINDWISE_INDEXABLE = QName.createQName(URI, "findwiseIndexable");
   public final QName PROP_LAST_PUSH_TO_INDEX = QName.createQName(URI, "lastPushToIndex");
   public final QName PROP_LAST_PUSH_FAILED = QName.createQName(URI, "lastPushFailed");
+  public final QName PROP_IN_INDEX = QName.createQName(URI, "inIndex");
 }
