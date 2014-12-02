@@ -192,7 +192,8 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
       Gson gson = new Gson();
       String json = gson.toJson(fobs);
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Json: " + json.substring(0, 2048) + "...");
+        String jsonString = (json.length()>2048)?json.substring(0, 2048):json;        
+        LOG.trace("Json: " + jsonString + "...");
       }
       if (Boolean.TRUE.equals(pushEnabled)) {
         pushResult = doPost(json);
@@ -418,9 +419,11 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
         // response.close();
       }
     } catch (UnsupportedEncodingException e) {
-      LOG.warn("Error transforming json to http entity. Json: " + json.substring(0, 2048) + "...", e);
+      String jsonString = (json.length()>2048)?json.substring(0, 2048):json;        
+      LOG.warn("Error transforming json to http entity. Json: " + jsonString + "...", e);
     } catch (Exception e) {
-      LOG.warn("Error executing http post to " + pushUrl + " Json: " + json.substring(0, 2048) + "...", e);
+      String jsonString = (json.length()>2048)?json.substring(0, 2048):json;  
+      LOG.warn("Error executing http post to " + pushUrl + " Json: " + jsonString + "...", e);
     } finally {
       /*
        * try { //httpclient.close(); } catch (IOException e) {
