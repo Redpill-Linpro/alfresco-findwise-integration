@@ -233,10 +233,6 @@ public class SearchIntegrationServiceImplTest {
         oneOf(behaviourFilter).enableBehaviour(nodeRef2);
         oneOf(nodeService).getType(nodeRef2);
         will(returnValue(ContentModel.TYPE_CONTENT));
-        // oneOf(dictionaryService).getClass(ContentModel.TYPE_CONTENT);
-        // will(returnValue(classDefinition));
-        // oneOf(classDefinition).getTitle(with(any(StaticMessageLookup.class)));
-        // will(returnValue("CustomType name"));
         oneOf(siteService).getSite(nodeRef2);
         will(returnValue(siteInfo));
         oneOf(siteInfo).getTitle();

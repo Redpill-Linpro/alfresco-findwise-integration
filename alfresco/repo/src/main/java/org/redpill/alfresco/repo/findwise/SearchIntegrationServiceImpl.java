@@ -164,7 +164,7 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
     if (!ACTION_CREATE.equals(action) && !ACTION_DELETE.equals(action)) {
       throw new UnsupportedOperationException(action + " is not a supported operation");
     }
-    
+
     if (ACTION_CREATE.equals(action)) {
       if (nodeRef == null || !nodeService.exists(nodeRef)) {
         LOG.debug(nodeRef + " does not exist");
@@ -186,17 +186,13 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
       FindwiseObjectBean fob = createFindwiseObjectBean(nodeRef, true);
       fobs.add(fob);
       send = true;
-    } 
+    }
     boolean pushResult = false;
     if (send && ACTION_CREATE.equals(action)) {
       Gson gson = new Gson();
       String json = gson.toJson(fobs);
       if (LOG.isTraceEnabled()) {
-        if (json.length() < 102400) {
-          LOG.trace("Json: " + json);
-        } else {
-          LOG.trace("Omitting json trace printout due to its size");
-        }
+        LOG.trace("Json: " + json.substring(0, 2048) + "...");
       }
       if (Boolean.TRUE.equals(pushEnabled)) {
         pushResult = doPost(json);
@@ -354,18 +350,7 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
         if (LOG.isTraceEnabled()) {
           LOG.trace("Detected " + javaClassName + " java type for property " + property.toString());
         }
-        /*
-         * if ("java.lang.String".equals(javaClassName)) { type = "string";
-         * ffb.setValue(value); } else if
-         * ("java.lang.Integer".equals(javaClassName)) { type = "integer";
-         * ffb.setValue(value); } else if
-         * ("java.lang.Long".equals(javaClassName)) { type = "long";
-         * ffb.setValue(value); } else if
-         * ("java.lang.Boolean".equals(javaClassName)) { type = "boolean";
-         * ffb.setValue(value); } else if
-         * ("java.lang.Date".equals(javaClassName)) { type = "date";
-         * ffb.setValue(value); } else
-         */
+
         if ("java.util.Date".equals(javaClassName)) {
           if (LOG.isTraceEnabled()) {
             LOG.trace("Converting " + property.toString() + " to date");
@@ -433,9 +418,9 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
         // response.close();
       }
     } catch (UnsupportedEncodingException e) {
-      LOG.warn("Error transforming json to http entity. Json: " + json, e);
+      LOG.warn("Error transforming json to http entity. Json: " + json.substring(0, 2048) + "...", e);
     } catch (Exception e) {
-      LOG.warn("Error executing http post to " + pushUrl + " Json: " + json, e);
+      LOG.warn("Error executing http post to " + pushUrl + " Json: " + json.substring(0, 2048) + "...", e);
     } finally {
       /*
        * try { //httpclient.close(); } catch (IOException e) {

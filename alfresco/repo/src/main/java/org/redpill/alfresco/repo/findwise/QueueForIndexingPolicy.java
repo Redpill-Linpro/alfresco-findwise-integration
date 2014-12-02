@@ -30,6 +30,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import org.alfresco.model.ContentModel;
 import org.alfresco.repo.node.NodeServicePolicies.OnAddAspectPolicy;
 import org.alfresco.repo.node.NodeServicePolicies.OnDeleteNodePolicy;
+import org.alfresco.repo.node.NodeServicePolicies.OnMoveNodePolicy;
 import org.alfresco.repo.node.NodeServicePolicies.OnUpdateNodePolicy;
 import org.alfresco.repo.policy.Behaviour;
 import org.alfresco.repo.policy.Behaviour.NotificationFrequency;
@@ -57,7 +58,7 @@ import org.springframework.util.Assert;
  * @author Marcus Svensson
  *
  */
-public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePolicy, OnAddAspectPolicy, OnDeleteNodePolicy {
+public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePolicy, OnAddAspectPolicy, OnDeleteNodePolicy, OnMoveNodePolicy {
 
   private static final Logger LOG = Logger.getLogger(QueueForIndexingPolicy.class);
   private static boolean isInitialized = false;
@@ -77,11 +78,14 @@ public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePol
   @Override
   public void afterPropertiesSet() throws Exception {
     if (!isInitialized()) {
-      policyComponent.bindClassBehaviour(OnUpdateNodePolicy.QNAME, ContentModel.TYPE_CONTENT, new JavaBehaviour(this, "onUpdateNode", NotificationFrequency.TRANSACTION_COMMIT));
-      policyComponent.bindClassBehaviour(OnDeleteNodePolicy.QNAME, ContentModel.TYPE_CONTENT, new JavaBehaviour(this, "onDeleteNode", NotificationFrequency.TRANSACTION_COMMIT));
-
+      policyComponent.bindClassBehaviour(OnUpdateNodePolicy.QNAME, FindwiseIntegrationModel.ASPECT_FINDWISE_INDEXABLE,
+          new JavaBehaviour(this, "onUpdateNode", NotificationFrequency.TRANSACTION_COMMIT));
+      policyComponent.bindClassBehaviour(OnDeleteNodePolicy.QNAME, FindwiseIntegrationModel.ASPECT_FINDWISE_INDEXABLE,
+          new JavaBehaviour(this, "onDeleteNode", NotificationFrequency.TRANSACTION_COMMIT));
       policyComponent.bindClassBehaviour(OnAddAspectPolicy.QNAME, FindwiseIntegrationModel.ASPECT_FINDWISE_INDEXABLE, new JavaBehaviour(this, "onAddAspect",
           Behaviour.NotificationFrequency.TRANSACTION_COMMIT));
+      policyComponent.bindClassBehaviour(OnMoveNodePolicy.QNAME, FindwiseIntegrationModel.ASPECT_FINDWISE_INDEXABLE, new JavaBehaviour(this, "onMoveNode", NotificationFrequency.TRANSACTION_COMMIT));
+
     }
     Assert.notNull(nodeService);
     Assert.notNull(policyComponent);
@@ -209,6 +213,22 @@ public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePol
 
   }
 
+  @Override
+  public void onMoveNode(ChildAssociationRef oldChildAssocRef, ChildAssociationRef newChildAssocRef) {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("onMoveNode begin");
+    }
+
+    if (isValidDocument(newChildAssocRef.getChildRef())) {
+      LOG.debug(newChildAssocRef.getChildRef() + " is a valid document which will be scheduled for indexing");
+      addToCreateQueue(newChildAssocRef.getChildRef());
+    }
+
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("onMoveNode end");
+    }
+  }
+
   /**
    * Transaction listener, fires off the new thread after transaction commit.
    */
@@ -277,4 +297,5 @@ public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePol
       }
     }
   }
+
 }
