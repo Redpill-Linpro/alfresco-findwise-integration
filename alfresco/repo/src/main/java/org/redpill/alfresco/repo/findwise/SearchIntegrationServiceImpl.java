@@ -146,19 +146,21 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
   }
 
   @Override
-  public void pushUpdateToIndexService(final Set<NodeRef> documentNodeRefs, final String action) {
+  public boolean pushUpdateToIndexService(final Set<NodeRef> documentNodeRefs, final String action) {
+    boolean result = true;
     Iterator<NodeRef> iterator = documentNodeRefs.iterator();
     while (iterator.hasNext()) {
-      pushUpdateToIndexService(iterator.next(), action);
+      boolean thisResult = pushUpdateToIndexService(iterator.next(), action);
+      result = result && thisResult;
     }
+    return result;
   }
 
   @Override
-  public void pushUpdateToIndexService(final NodeRef nodeRef, String action) {
+  public boolean pushUpdateToIndexService(final NodeRef nodeRef, String action) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("pushUpdateToIndexService begin");
     }
-
     boolean send = false;
     List<FindwiseObjectBean> fobs = new ArrayList<FindwiseObjectBean>();
     if (!ACTION_CREATE.equals(action) && !ACTION_DELETE.equals(action)) {
@@ -192,7 +194,7 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
       Gson gson = new Gson();
       String json = gson.toJson(fobs);
       if (LOG.isTraceEnabled()) {
-        String jsonString = (json.length()>2048)?json.substring(0, 2048):json;        
+        String jsonString = (json.length() > 2048) ? json.substring(0, 2048) : json;
         LOG.trace("Json: " + jsonString + "...");
       }
       if (Boolean.TRUE.equals(pushEnabled)) {
@@ -224,10 +226,10 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
       }
       behaviourFilter.enableBehaviour(nodeRef);
     }
-
     if (LOG.isTraceEnabled()) {
       LOG.trace("pushUpdateToIndexService end");
     }
+    return pushResult;
   }
 
   protected boolean isPropertyAllowedToIndex(QName property) {
@@ -419,10 +421,10 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
         // response.close();
       }
     } catch (UnsupportedEncodingException e) {
-      String jsonString = (json.length()>2048)?json.substring(0, 2048):json;        
+      String jsonString = (json.length() > 2048) ? json.substring(0, 2048) : json;
       LOG.warn("Error transforming json to http entity. Json: " + jsonString + "...", e);
     } catch (Exception e) {
-      String jsonString = (json.length()>2048)?json.substring(0, 2048):json;  
+      String jsonString = (json.length() > 2048) ? json.substring(0, 2048) : json;
       LOG.warn("Error executing http post to " + pushUrl + " Json: " + jsonString + "...", e);
     } finally {
       /*

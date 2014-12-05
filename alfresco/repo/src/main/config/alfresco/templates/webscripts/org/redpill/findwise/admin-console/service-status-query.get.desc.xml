@@ -1,0 +1,9 @@
+<webscript>
+   <shortname>Findwise service status query webscript</shortname>
+   <description>Execute searches</description>
+   <url>/findwise/node/search</url>
+   <family>Findwise</family>
+   <format default="json">argument</format>
+   <authentication>admin</authentication>
+   <transaction allow="readonly">required</transaction>
+</webscript>

@@ -30,4 +30,49 @@
     </property>
     <property name="fileExtensions" value="${findwise.allowedFileExtensions}" />
   </bean>
+
+  <!-- Service status query web script -->
+  <bean id="webscript.org.redpill.findwise.admin-console.service-status-query.get" parent="webscript" class="org.redpill.alfresco.repo.findwise.webscript.FindwiseServiceStatusScript">
+    <property name="transactionService">
+      <ref bean="TransactionService" />
+    </property>
+    <property name="nodeService">
+      <ref bean="NodeService" />
+    </property>
+    <property name="dictionaryService">
+      <ref bean="DictionaryService" />
+    </property>
+    <property name="searchService">
+      <ref bean="SearchService" />
+    </property>
+    <property name="namespaceService">
+      <ref bean="NamespaceService" />
+    </property>
+    <property name="permissionService">
+      <ref bean="PermissionService" />
+    </property>
+    <property name="ownableService">
+      <ref bean="OwnableService" />
+    </property>
+    <property name="AVMService">
+      <ref bean="AVMService" />
+    </property>
+    <property name="siteService">
+      <ref bean="SiteService" />
+    </property>
+    <property name="fileFolderService">
+      <ref bean="FileFolderService" />
+    </property>
+  </bean>
+  
+  <!-- Index manager reindex webscript -->
+  <bean id="webscript.org.redpill.findwise.admin-console.index-manager-reindex-node.post" parent="webscript" class="org.redpill.alfresco.repo.findwise.webscript.FindwiseReindexNodeScript">
+    <property name="searchIntegrationService" ref="findwise.service.SearchIntegrationService" />
+    <property name="nodeService" ref="NodeService" />
+    <property name="searchService" ref="SearchService" />
+    <property name="jobLockService" ref="jobLockService" />
+    <property name="transactionService" ref="TransactionService" />
+    <property name="lockTTL" value="30000" />
+    <property name="repositoryState" ref="repositoryState" />
+  </bean>
 </beans>

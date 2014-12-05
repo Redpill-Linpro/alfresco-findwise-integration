@@ -40,7 +40,7 @@ public interface SearchIntegrationService {
    * @param action
    *          The action
    */
-  public void pushUpdateToIndexService(NodeRef nodeRef, String action);
+  public boolean pushUpdateToIndexService(NodeRef nodeRef, String action);
 
   /**
    * Push multiple nodes to the indexing service
@@ -50,7 +50,7 @@ public interface SearchIntegrationService {
    * @param action
    *          The action
    */
-  public void pushUpdateToIndexService(Set<NodeRef> nodeRefs, String action);
+  public boolean pushUpdateToIndexService(Set<NodeRef> nodeRefs, String action);
 
   /**
    * Set the node verifier processor programmatically to override the default

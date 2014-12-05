@@ -1,0 +1,10 @@
+<webscript>
+   <shortname>Findwise index manager reindex node webscript</shortname>
+   <description>Execute searches</description>
+   <url>/findwise/node/reindex/{protocol}/{identifier}/{id}</url>
+   <url>/findwise/node/reindex/everything</url>
+   <family>Findwise</family>
+   <format default="json">argument</format>
+   <authentication>admin</authentication>
+   <transaction>required</transaction>
+</webscript>

@@ -28,6 +28,37 @@
     <module>share</module>
   </modules>
 
+  <developers>
+    <developer>
+      <id>marcus.svensson</id>
+      <name>Marcus Svensson</name>
+      <email>marcus.svensson (at) redpill-linpro.com</email>
+      <organization>Redpill Linpro AB</organization>
+      <organizationUrl>http://www.redpill-linpro.com</organizationUrl>
+      <roles>
+        <role>Founder</role>
+        <role>Architect</role>
+        <role>Developer</role>
+      </roles>
+      <timezone>+1</timezone>
+    </developer>
+  </developers>
+
+  <contributors>
+    <contributor />
+  </contributors>
+
+  <scm>
+    <connection>scm:git@github.com:Redpill-Linpro/alfresco-findwise-integration.git</connection>
+    <developerConnection>scm:git@github.com:Redpill-Linpro/alfresco-findwise-integration.git</developerConnection>
+    <url>scm:git@github.com:Redpill-Linpro/alfresco-findwise-integration.git</url>
+  </scm>
+
+  <issueManagement>
+    <system>Github</system>
+    <url>https://github.com/Redpill-Linpro/alfresco-findwise-integration/issues</url>
+  </issueManagement>
+
   <repositories>
     <repository>
       <id>redpill-public</id>

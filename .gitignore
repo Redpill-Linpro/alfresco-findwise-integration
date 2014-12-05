@@ -18,3 +18,4 @@ target
 alf_data_dev
 repo/.xml/
 alfresco.log
+*.sh
