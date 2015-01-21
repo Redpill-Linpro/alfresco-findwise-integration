@@ -173,6 +173,8 @@ public class QueueForIndexingPolicy implements InitializingBean, OnUpdateNodePol
       LOG.debug(nodeRef + " is a valid document which will be scheduled for indexing");
       addToCreateQueue(nodeRef);
     }
+    
+    //Todo add to delete queue if status is changed from complete to working copy or from public to secret
 
     if (LOG.isTraceEnabled()) {
       LOG.trace("onUpdateNode end");
