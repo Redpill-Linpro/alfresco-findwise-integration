@@ -16,3 +16,6 @@ findwise.maxFileSize=20971520
 #Default allowed file extensions
 findwise.allowedFileExtensions=doc,docx,docm,xls,xlsx,xlsm,ppt,pptx,pptm,pdf,odt,ods,odp,txt,html
 ```
+
+## Installation
+TODO
