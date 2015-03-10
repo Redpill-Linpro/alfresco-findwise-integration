@@ -21,6 +21,9 @@
   <properties>
     <alfresco.groupId>org.alfresco.enterprise</alfresco.groupId>
     <alfresco.version>4.1.9.4</alfresco.version>
+    <testframework.version>1.0.5</testframework.version>
+    <java.source.version>1.6</java.source.version>
+    <java.target.version>1.6</java.target.version>
   </properties>
 
   <modules>
