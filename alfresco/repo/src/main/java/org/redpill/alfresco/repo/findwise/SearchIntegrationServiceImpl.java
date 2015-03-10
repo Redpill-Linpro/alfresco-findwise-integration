@@ -368,13 +368,14 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
           }
           ContentReader contentReader = contentService.getReader(nodeRef, property);
           if (contentReader != null) {
-            InputStream nodeIS = new BufferedInputStream(contentReader.getContentInputStream(), 4096);
-
-            try {
-              byte[] nodeBytes = IOUtils.toByteArray(nodeIS);
+            InputStream contentInputStream = contentReader.getContentInputStream();
+            try {              
+              byte[] nodeBytes = IOUtils.toByteArray(contentInputStream);
               ffb.setValue(new String(Base64.encodeBase64(nodeBytes)));
             } catch (IOException e) {
               LOG.warn("Error while reading content", e);
+            } finally {
+              IOUtils.closeQuietly(contentInputStream);
             }
           } else {
             LOG.warn(nodeRef + " had no content");
