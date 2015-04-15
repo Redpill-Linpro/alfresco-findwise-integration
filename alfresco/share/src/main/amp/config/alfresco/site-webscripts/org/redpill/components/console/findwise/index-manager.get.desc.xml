@@ -1,0 +1,6 @@
+<webscript>
+  <shortname>Service Status</shortname>
+  <description>Admin Console - Findwise - Service Status</description>
+  <url>/components/console/service-status</url>
+  <family>admin-console</family>
+</webscript>

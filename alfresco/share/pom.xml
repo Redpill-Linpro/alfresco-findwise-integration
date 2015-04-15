@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.redpill-linpro.alfresco.findwise</groupId>
+    <artifactId>findwise-integration</artifactId>
+    <version>4.1.10</version>
+  </parent>
+  
+  <artifactId>findwise-integration-share</artifactId>
+  <packaging>amp</packaging>
+  <name>Alfresco Share - Findwise integration framework</name>
+
+  <properties>
+    <module.id>findwise-share</module.id>
+    <alfresco.client.war>share</alfresco.client.war>
+    <tomcat.home>${tomcat.share.home}</tomcat.home>
+    <tomcat.port>${tomcat.share.port}</tomcat.port>
+  </properties>
+
+</project>
