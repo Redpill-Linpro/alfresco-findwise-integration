@@ -5,20 +5,20 @@
   <parent>
     <groupId>org.redpill-linpro.alfresco.findwise</groupId>
     <artifactId>findwise-integration</artifactId>
-    <version>4.1.10</version>
+    <version>4.2.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>findwise-integration-repo</artifactId>
   <packaging>jar</packaging>
   <name>Alfresco Repository - Findwise integration framework</name>
-  
+
   <properties>
     <module.id>findwise</module.id>
     <alfresco.client.war>alfresco</alfresco.client.war>
     <tomcat.home>${tomcat.repo.home}</tomcat.home>
     <tomcat.port>${tomcat.repo.port}</tomcat.port>
   </properties>
-  
+
   <dependencies>
 
     <dependency>
