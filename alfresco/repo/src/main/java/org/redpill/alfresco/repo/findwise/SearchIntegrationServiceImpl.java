@@ -364,16 +364,21 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
         } else if ("org.alfresco.service.cmr.repository.ContentData".equals(javaClassName)) {
           // Create Base64 data
           if (LOG.isTraceEnabled()) {
-            LOG.trace("Skipping field " + property.toString());
+            LOG.trace("Handling content on property " + property.toString());
           }
           ContentReader contentReader = contentService.getReader(nodeRef, property);
-          InputStream nodeIS = new BufferedInputStream(contentReader.getContentInputStream(), 4096);
-
-          try {
-            byte[] nodeBytes = IOUtils.toByteArray(nodeIS);
-            ffb.setValue(new String(Base64.encodeBase64(nodeBytes)));
-          } catch (IOException e) {
-            LOG.warn("Error while reading content", e);
+          if (contentReader != null) {
+            InputStream contentInputStream = contentReader.getContentInputStream();
+            try {              
+              byte[] nodeBytes = IOUtils.toByteArray(contentInputStream);
+              ffb.setValue(new String(Base64.encodeBase64(nodeBytes)));
+            } catch (IOException e) {
+              LOG.warn("Error while reading content", e);
+            } finally {
+              IOUtils.closeQuietly(contentInputStream);
+            }
+          } else {
+            LOG.warn(nodeRef + " had no content");
           }
           type = "binary";
         } else {

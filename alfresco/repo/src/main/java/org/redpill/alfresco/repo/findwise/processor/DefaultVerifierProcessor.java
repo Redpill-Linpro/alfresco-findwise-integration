@@ -78,7 +78,7 @@ public class DefaultVerifierProcessor implements NodeVerifierProcessor, Initiali
 
     // Check file size
     ContentReader reader = contentService.getReader(node, ContentModel.PROP_CONTENT);
-    if (reader.getSize() > maxFileSize) {
+    if (reader!=null && reader.getSize() > maxFileSize) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("File size for node " + node + " is too big");
       }
