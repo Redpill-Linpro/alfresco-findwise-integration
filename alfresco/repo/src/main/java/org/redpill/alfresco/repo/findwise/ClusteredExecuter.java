@@ -104,7 +104,6 @@ public abstract class ClusteredExecuter implements InitializingBean {
    * Attempts to get the lock. If it fails, the current transaction is marked
    * for rollback.
    * 
-   * @return Returns the lock token
    */
   protected void refreshLock() {
     if (LOG.isDebugEnabled()) {

@@ -4,15 +4,18 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
-import org.alfresco.repo.cache.MemoryCache;
+import org.alfresco.repo.dictionary.CompiledModelsCache;
 import org.alfresco.repo.dictionary.DictionaryBootstrap;
 import org.alfresco.repo.dictionary.DictionaryDAOImpl;
-import org.alfresco.repo.dictionary.DictionaryDAOImpl.DictionaryRegistry;
-import org.alfresco.repo.dictionary.NamespaceDAOImpl;
-import org.alfresco.repo.dictionary.NamespaceDAOImpl.NamespaceRegistry;
 import org.alfresco.repo.tenant.SingleTServiceImpl;
 import org.alfresco.repo.tenant.TenantService;
+import org.alfresco.util.DynamicallySizedThreadPoolExecutor;
+import org.alfresco.util.TraceableThreadFactory;
+import org.alfresco.util.cache.DefaultAsynchronouslyRefreshedCacheRegistry;
 import org.junit.Test;
 
 public class DataModelTest {
@@ -69,10 +72,8 @@ public class DataModelTest {
       bootstrapModels.add("alfresco/model/systemModel.xml");
       bootstrapModels.add("org/alfresco/repo/security/authentication/userModel.xml");
       bootstrapModels.add("alfresco/model/contentModel.xml");
-      bootstrapModels.add("alfresco/model/wcmModel.xml");
       bootstrapModels.add("alfresco/model/applicationModel.xml");
       bootstrapModels.add("alfresco/model/bpmModel.xml");
-      bootstrapModels.add("alfresco/model/wcmAppModel.xml");
       bootstrapModels.add("alfresco/model/datalistModel.xml");
       bootstrapModels.add("alfresco/workflow/workflowModel.xml");
       bootstrapModels.add("alfresco/model/siteModel.xml");
@@ -88,15 +89,14 @@ public class DataModelTest {
       // construct dictionary dao
       TenantService tenantService = new SingleTServiceImpl();
 
-      NamespaceDAOImpl namespaceDAO = new NamespaceDAOImpl();
-      namespaceDAO.setTenantService(tenantService);
+      // NamespaceDAO namespaceDAO = new NamespaceDAOImpl();
+      // namespaceDAO.setTenantService(tenantService);
+      // initNamespaceCaches(namespaceDAO);
 
-      initNamespaceCaches(namespaceDAO);
-
-      DictionaryDAOImpl dictionaryDAO = new DictionaryDAOImpl(namespaceDAO);
+      DictionaryDAOImpl dictionaryDAO = new DictionaryDAOImpl();
       dictionaryDAO.setTenantService(tenantService);
 
-      initDictionaryCaches(dictionaryDAO);
+      initDictionaryCaches(dictionaryDAO, tenantService);
 
       // bootstrap dao
       try {
@@ -120,16 +120,21 @@ public class DataModelTest {
       }
     }
 
-    private static void initDictionaryCaches(DictionaryDAOImpl dictionaryDAO) {
-      MemoryCache<String, DictionaryRegistry> memCache = new MemoryCache<String, DictionaryRegistry>();
+    private static void initDictionaryCaches(DictionaryDAOImpl dictionaryDAO, TenantService tenantService) {
+      CompiledModelsCache compiledModelsCache = new CompiledModelsCache();
+      compiledModelsCache.setDictionaryDAO(dictionaryDAO);
+      compiledModelsCache.setTenantService(tenantService);
+      compiledModelsCache.setRegistry(new DefaultAsynchronouslyRefreshedCacheRegistry());
+      TraceableThreadFactory threadFactory = new TraceableThreadFactory();
+      threadFactory.setThreadDaemon(true);
+      threadFactory.setThreadPriority(Thread.NORM_PRIORITY);
 
-      dictionaryDAO.setDictionaryRegistryCache(memCache);
+      ThreadPoolExecutor threadPoolExecutor = new DynamicallySizedThreadPoolExecutor(20, 20, 90, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), threadFactory,
+          new ThreadPoolExecutor.CallerRunsPolicy());
+      compiledModelsCache.setThreadPoolExecutor(threadPoolExecutor);
+      dictionaryDAO.setDictionaryRegistryCache(compiledModelsCache);
+      dictionaryDAO.init();
     }
 
-    private static void initNamespaceCaches(NamespaceDAOImpl namespaceDAO) {
-      MemoryCache<String, NamespaceRegistry> memCache = new MemoryCache<String, NamespaceRegistry>();
-
-      namespaceDAO.setNamespaceRegistryCache(memCache);
-    }
   }
 }

@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.redpill-linpro.alfresco.findwise</groupId>
     <artifactId>findwise-integration</artifactId>
-    <version>4.2.0-SNAPSHOT</version>
+    <version>5.0.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>findwise-integration-repo</artifactId>
@@ -17,6 +17,9 @@
     <alfresco.client.war>alfresco</alfresco.client.war>
     <tomcat.home>${tomcat.repo.home}</tomcat.home>
     <tomcat.port>${tomcat.repo.port}</tomcat.port>
+    <env>local</env>
+    <jetty.host>localhost</jetty.host>
+    <jetty.port>8080</jetty.port>
   </properties>
 
   <dependencies>
@@ -24,11 +27,13 @@
     <dependency>
       <groupId>${alfresco.groupId}</groupId>
       <artifactId>alfresco-repository</artifactId>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>
       <groupId>${alfresco.groupId}</groupId>
       <artifactId>alfresco-remote-api</artifactId>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>
@@ -53,7 +58,6 @@
       <version>4.1.1</version>
       <scope>provided</scope>
     </dependency>
-
   </dependencies>
 
   <organization>
