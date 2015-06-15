@@ -7,23 +7,23 @@
   <parent>
     <groupId>com.redpill-linpro.alfresco</groupId>
     <artifactId>alfresco-base</artifactId>
-    <version>1.1.1.7</version>
+    <version>2.1.0</version>
   </parent>
 
 
   <groupId>org.redpill-linpro.alfresco.findwise</groupId>
   <artifactId>findwise-integration</artifactId>
-  <version>4.1.10</version>
+  <version>5.0.0</version>
   <name>Alfresco Findwise integration module</name>
   <description>Alfresco Findwise integration module</description>
   <packaging>pom</packaging>
 
   <properties>
-    <alfresco.groupId>org.alfresco.enterprise</alfresco.groupId>
-    <alfresco.version>4.1.9.4</alfresco.version>
-    <testframework.version>1.0.5</testframework.version>
-    <java.source.version>1.6</java.source.version>
-    <java.target.version>1.6</java.target.version>
+    <alfresco.groupId>org.alfresco</alfresco.groupId>
+    <alfresco.version>5.0.d</alfresco.version>
+    <testframework.version>2.1.1</testframework.version>
+    <java.source.version>1.8</java.source.version>
+    <java.target.version>1.8</java.target.version>
   </properties>
 
   <modules>
@@ -62,10 +62,21 @@
     <url>https://github.com/Redpill-Linpro/alfresco-findwise-integration/issues</url>
   </issueManagement>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.redpill-linpro.alfresco</groupId>
+        <artifactId>alfresco-test-repo</artifactId>
+        <version>${testframework.version}</version>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <repositories>
     <repository>
       <id>redpill-public</id>
-      <url>http://maven.redpill-linpro.com/nexus/content/groups/public</url>
+      <url>https://maven.redpill-linpro.com/nexus/content/groups/public</url>
     </repository>
   </repositories>
 

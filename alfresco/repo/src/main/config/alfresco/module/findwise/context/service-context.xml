@@ -32,30 +32,9 @@
   </bean>
 
   <!-- Service status query web script -->
-  <bean id="webscript.org.redpill.findwise.admin-console.service-status-query.get" parent="webscript" class="org.redpill.alfresco.repo.findwise.webscript.FindwiseServiceStatusScript">
-    <property name="transactionService">
-      <ref bean="TransactionService" />
-    </property>
+  <bean id="webscript.org.redpill.findwise.admin-console.service-status-query.get" parent="webscript" class="org.redpill.alfresco.repo.findwise.webscript.FindwiseServiceStatusScript"> 
     <property name="nodeService">
       <ref bean="NodeService" />
-    </property>
-    <property name="dictionaryService">
-      <ref bean="DictionaryService" />
-    </property>
-    <property name="searchService">
-      <ref bean="SearchService" />
-    </property>
-    <property name="namespaceService">
-      <ref bean="NamespaceService" />
-    </property>
-    <property name="permissionService">
-      <ref bean="PermissionService" />
-    </property>
-    <property name="ownableService">
-      <ref bean="OwnableService" />
-    </property>
-    <property name="AVMService">
-      <ref bean="AVMService" />
     </property>
     <property name="siteService">
       <ref bean="SiteService" />
@@ -63,6 +42,25 @@
     <property name="fileFolderService">
       <ref bean="FileFolderService" />
     </property>
+    
+    <property name="transactionService">
+         <ref bean="TransactionService" />
+      </property>
+      <property name="dictionaryService">
+         <ref bean="DictionaryService" />
+      </property>
+      <property name="searchService">
+         <ref bean="SearchService" />
+      </property>
+      <property name="namespaceService">
+         <ref bean="NamespaceService" />
+      </property>
+      <property name="permissionService">
+         <ref bean="PermissionService" />
+      </property>
+      <property name="ownableService">
+         <ref bean="OwnableService" />
+      </property>
   </bean>
   
   <!-- Index manager reindex webscript -->

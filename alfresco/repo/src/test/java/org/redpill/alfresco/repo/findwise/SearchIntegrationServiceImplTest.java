@@ -38,6 +38,7 @@ import java.util.Set;
 
 import org.alfresco.model.ContentModel;
 import org.alfresco.repo.admin.SysAdminParams;
+import org.alfresco.repo.dictionary.Facetable;
 import org.alfresco.repo.dictionary.IndexTokenisationMode;
 import org.alfresco.repo.policy.BehaviourFilter;
 import org.alfresco.service.cmr.dictionary.ClassDefinition;
@@ -498,6 +499,24 @@ public class SearchIntegrationServiceImplTest {
 
     @Override
     public String resolveAnalyserClassName() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public String getDescription(MessageLookup arg0, Locale arg1) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public Facetable getFacetable() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public String getTitle(MessageLookup arg0, Locale arg1) {
       // TODO Auto-generated method stub
       return null;
     }

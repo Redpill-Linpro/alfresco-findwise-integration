@@ -7,9 +7,9 @@
   <parent>
     <groupId>org.redpill-linpro.alfresco.findwise</groupId>
     <artifactId>findwise-integration</artifactId>
-    <version>4.1.10</version>
+    <version>5.0.0</version>
   </parent>
-  
+
   <artifactId>findwise-integration-share</artifactId>
   <packaging>amp</packaging>
   <name>Alfresco Share - Findwise integration framework</name>
