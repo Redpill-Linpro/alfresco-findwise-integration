@@ -88,6 +88,9 @@ public class DefaultVerifierProcessor implements NodeVerifierProcessor, Initiali
     // Check file extension
     String fileName = (String) nodeService.getProperty(node, ContentModel.PROP_NAME);
     String extension = FilenameUtils.getExtension(fileName);
+    if (extension!=null) {
+      extension = extension.toLowerCase().trim();
+    }
     if (!fileExtensions.contains(extension)) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("File extension " + extension + " for " + node + " is not allowed");
@@ -123,7 +126,7 @@ public class DefaultVerifierProcessor implements NodeVerifierProcessor, Initiali
       if (LOG.isTraceEnabled()) {
         LOG.trace("Allowing file extension: " + ext);
       }
-      this.fileExtensions.add(ext.trim());
+      this.fileExtensions.add(ext.trim().toLowerCase());
     }   
     
     if (split.length <= StringUtils.countMatches(fileExtensions, ",")) {
