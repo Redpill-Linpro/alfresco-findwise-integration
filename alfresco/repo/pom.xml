@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.redpill-linpro.alfresco.findwise</groupId>
     <artifactId>findwise-integration</artifactId>
-    <version>5.0.1</version>
+    <version>5.0.1-SNAPSHOT</version>
   </parent>
 
   <artifactId>findwise-integration-repo</artifactId>

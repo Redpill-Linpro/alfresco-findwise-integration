@@ -333,71 +333,73 @@ public class SearchIntegrationServiceImpl implements SearchIntegrationService, I
           LOG.trace("Handling property " + property.toString());
         }
         Serializable value = properties.get(property);
-        if (NamespaceService.SYSTEM_MODEL_1_0_URI.equals(property.getNamespaceURI()) || FindwiseIntegrationModel.URI.equals(property.getNamespaceURI()) || !isPropertyAllowedToIndex(property)) {
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Skiping property " + property.toString());
-          }
-          continue;
-        }
-        String javaClassName = "unknown";
-        PropertyDefinition propertyDefinition = dictionaryService.getProperty(property);
-        // The following condition is needed to properly handle residual
-        // properties
-        if (propertyDefinition != null) {
-          DataTypeDefinition dataType = propertyDefinition.getDataType();
-          if (dataType != null) {
-            javaClassName = dataType.getJavaClassName();
-          }
-        }
-        String type;
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Detected " + javaClassName + " java type for property " + property.toString());
-        }
-
-        if ("java.util.Date".equals(javaClassName)) {
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Converting " + property.toString() + " to date");
-          }
-          type = "string";
-          DateTime date = new DateTime((Date) value, DateTimeZone.UTC);
-          ffb.setValue(date.toString());
-        } else if ("org.alfresco.service.cmr.repository.ContentData".equals(javaClassName)) {
-          // Create Base64 data
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Handling content on property " + property.toString());
-          }
-          ContentReader contentReader = contentService.getReader(nodeRef, property);
-          if (contentReader != null) {
-            InputStream contentInputStream = contentReader.getContentInputStream();
-            try {              
-              byte[] nodeBytes = IOUtils.toByteArray(contentInputStream);
-              ffb.setValue(new String(Base64.encodeBase64(nodeBytes)));
-            } catch (IOException e) {
-              LOG.warn("Error while reading content", e);
-            } finally {
-              IOUtils.closeQuietly(contentInputStream);
+        if(value != null){
+          if (NamespaceService.SYSTEM_MODEL_1_0_URI.equals(property.getNamespaceURI()) || FindwiseIntegrationModel.URI.equals(property.getNamespaceURI()) || !isPropertyAllowedToIndex(property)) {
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Skiping property " + property.toString());
             }
+            continue;
+          }
+          String javaClassName = "unknown";
+          PropertyDefinition propertyDefinition = dictionaryService.getProperty(property);
+          // The following condition is needed to properly handle residual
+          // properties
+          if (propertyDefinition != null) {
+            DataTypeDefinition dataType = propertyDefinition.getDataType();
+            if (dataType != null) {
+              javaClassName = dataType.getJavaClassName();
+            }
+          }
+          String type;
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Detected " + javaClassName + " java type for property " + property.toString());
+          }
+
+          if ("java.util.Date".equals(javaClassName)) {
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Converting " + property.toString() + " to date");
+            }
+            type = "string";
+            DateTime date = new DateTime((Date) value, DateTimeZone.UTC);
+            ffb.setValue(date.toString());
+          } else if ("org.alfresco.service.cmr.repository.ContentData".equals(javaClassName)) {
+            // Create Base64 data
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Handling content on property " + property.toString());
+            }
+            ContentReader contentReader = contentService.getReader(nodeRef, property);
+            if (contentReader != null) {
+              InputStream contentInputStream = contentReader.getContentInputStream();
+              try {              
+                byte[] nodeBytes = IOUtils.toByteArray(contentInputStream);
+                ffb.setValue(new String(Base64.encodeBase64(nodeBytes)));
+              } catch (IOException e) {
+                LOG.warn("Error while reading content", e);
+              } finally {
+                IOUtils.closeQuietly(contentInputStream);
+              }
+            } else {
+              LOG.warn(nodeRef + " had no content");
+            }
+            type = "binary";
           } else {
-            LOG.warn(nodeRef + " had no content");
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Unhandled property type, using default conversion");
+            }
+            type = "string";
+            ffb.setValue(value.toString());
           }
-          type = "binary";
-        } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Unhandled property type, using default conversion");
+          ffb.setType(type);
+
+          String name = property.toPrefixString(namespaceService);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Short name for property " + property.toString() + ": " + name);
           }
-          type = "string";
-          ffb.setValue(value.toString());
+
+          ffb.setName(name);
+
+          fields.add(ffb);
         }
-        ffb.setType(type);
-
-        String name = property.toPrefixString(namespaceService);
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Short name for property " + property.toString() + ": " + name);
-        }
-
-        ffb.setName(name);
-
-        fields.add(ffb);
       }
       fob.setFields(fields);
     }
