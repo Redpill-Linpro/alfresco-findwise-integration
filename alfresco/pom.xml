@@ -13,7 +13,7 @@
 
   <groupId>org.redpill-linpro.alfresco.findwise</groupId>
   <artifactId>findwise-integration</artifactId>
-  <version>5.0.1</version>
+  <version>5.1.0</version>
   <name>Alfresco Findwise integration module</name>
   <description>Alfresco Findwise integration module</description>
   <packaging>pom</packaging>
