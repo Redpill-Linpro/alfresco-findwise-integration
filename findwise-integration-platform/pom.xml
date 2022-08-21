@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>findwise-integration-platform</artifactId>
+    <name>Alfresco Findwise integration repo module</name>
+    <description>Alfresco Findwise integration repo module
+    </description>
+    <packaging>jar</packaging>
+
+    <parent>
+        <groupId>org.redpill-linpro.alfresco.findwise</groupId>
+        <artifactId>findwise-integration</artifactId>
+        <version>5.2.0-SNAPSHOT</version>
+    </parent>
+
+    <properties>
+    </properties>
+
+    <dependencies>
+      <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
+      <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpclient</artifactId>
+        <version>4.5.13</version>
+      </dependency>
+      <!-- https://mvnrepository.com/artifact/org.apache.directory.studio/org.apache.commons.lang -->
+      <dependency>
+        <groupId>org.apache.directory.studio</groupId>
+        <artifactId>org.apache.commons.lang</artifactId>
+        <version>2.6</version>
+      </dependency>
+      <!-- https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api -->
+      <dependency>
+        <groupId>javax.servlet</groupId>
+        <artifactId>javax.servlet-api</artifactId>
+        <version>4.0.1</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>${alfresco.groupId}</groupId>
+        <artifactId>alfresco-share-services</artifactId>
+        <version>${alfresco.share.version}</version>
+        <classifier>classes</classifier>
+      </dependency>
+      <!-- https://mvnrepository.com/artifact/org.jmock/jmock -->
+      <dependency>
+        <groupId>org.jmock</groupId>
+        <artifactId>jmock</artifactId>
+        <version>2.12.0</version>
+        <scope>test</scope>
+      </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

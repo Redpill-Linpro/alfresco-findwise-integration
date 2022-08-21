@@ -386,7 +386,7 @@ public class SearchIntegrationServiceImplTest {
           return null;
         }
 
-        @Override
+        //@Override
         public String getAnalyserResourceBundleName() {
           // TODO Auto-generated method stub
           return null;
@@ -398,19 +398,19 @@ public class SearchIntegrationServiceImplTest {
           return javaClassName;
         }
 
-        @Override
+        //@Override
         public String getDefaultAnalyserClassName() {
           // TODO Auto-generated method stub
           return null;
         }
 
-        @Override
+        //@Override
         public String resolveAnalyserClassName(Locale locale) {
           // TODO Auto-generated method stub
           return null;
         }
 
-        @Override
+        //@Override
         public String resolveAnalyserClassName() {
           // TODO Auto-generated method stub
           return null;
@@ -485,19 +485,19 @@ public class SearchIntegrationServiceImplTest {
       return null;
     }
 
-    @Override
+    //@Override
     public String getAnalyserResourceBundleName() {
       // TODO Auto-generated method stub
       return null;
     }
 
-    @Override
+    //@Override
     public String resolveAnalyserClassName(Locale locale) {
       // TODO Auto-generated method stub
       return null;
     }
 
-    @Override
+    //@Override
     public String resolveAnalyserClassName() {
       // TODO Auto-generated method stub
       return null;
